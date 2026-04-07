@@ -183,6 +183,217 @@ html, body, #root {
   gap: 24px;
 }
 
+.conversation--hidden {
+  display: none;
+}
+
+/* Home screen (first step) — matches Prompt to deck V3 */
+.chat-inner--home {
+  align-items: center;
+  justify-content: center;
+  padding: 64px 40px 128px;
+}
+
+.home-hero {
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+
+.home-hero-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 34px;
+  letter-spacing: 0.38px;
+  text-align: center;
+  color: #0d0d0d;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.composer--home {
+  width: 100%;
+  max-width: 768px;
+  min-height: 112px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.composer-home-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.composer-home-value-row {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 0 20px;
+}
+
+.composer-input--home {
+  font-size: 16px;
+  letter-spacing: -0.16px;
+}
+
+.composer-input--home::placeholder {
+  color: #a4a4a4;
+}
+
+.composer-home-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 56px;
+  padding: 8px 14px 12px;
+}
+
+.composer-home-action-left,
+.composer-home-action-right {
+  display: flex;
+  align-items: center;
+}
+
+.composer-home-action-right {
+  gap: 12px;
+}
+
+.composer-home-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 18px;
+  cursor: pointer;
+  color: #0d0d0d;
+}
+
+.composer-home-icon-btn:hover {
+  background: rgba(13, 13, 13, 0.06);
+}
+
+.composer-home-voice-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.composer-home-voice-btn:hover {
+  background: rgba(13, 13, 13, 0.06);
+}
+
+.composer-home-send {
+  flex-shrink: 0;
+}
+
+/* Inline tool cards — ChatGPT Apps–style: system type, one primary CTA, no nested scroll */
+.card--template-placeholder {
+  cursor: default;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.card--template-placeholder:hover {
+  border: none;
+  background: transparent;
+}
+
+.inline-tool-card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  padding: 14px 16px;
+  background: #fff;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: none;
+  color-scheme: light;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.inline-tool-card--panel {
+  padding: 16px 18px;
+  border-radius: 14px;
+}
+
+.inline-tool-card--frozen {
+  padding: 12px 14px;
+  border-left: 3px solid rgba(13, 13, 13, 0.12);
+  background: rgba(13, 13, 13, 0.02);
+}
+
+.inline-tool-card__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  color: #0d0d0d;
+  letter-spacing: -0.15px;
+  font-family: inherit;
+}
+
+.inline-tool-card__subtitle {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
+  color: rgba(13, 13, 13, 0.62);
+  max-width: 52ch;
+}
+
+.inline-tool-card__actions {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.inline-tool-card__btn-primary {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  font-family: inherit;
+  color: #fff;
+  background: #0d0d0d;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.inline-tool-card__btn-primary:hover:not(:disabled) {
+  background: #2a2a2a;
+}
+
+.inline-tool-card__btn-primary:focus-visible {
+  outline: 2px solid #0d0d0d;
+  outline-offset: 2px;
+}
+
+.inline-tool-card__btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* Message bubble */
 .message-row {
   display: flex;
@@ -294,12 +505,6 @@ html, body, #root {
 }
 
 /* Frozen “previous” cards / summary — new widget loads underneath */
-.options-container--stacked-past {
-  pointer-events: none;
-  user-select: none;
-  opacity: 0.92;
-}
-
 .canva-widget-stack__prior {
   width: 100%;
   max-width: 100%;
@@ -496,7 +701,7 @@ html, body, #root {
   padding: 24px;
   background: #fff;
   border-radius: 24px;
-  box-shadow: 0px 6px 12px 0px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
   border: 0.5px solid rgba(13, 13, 13, 0.08);
   max-width: 100%;
   min-width: 0;
