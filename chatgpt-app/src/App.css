@@ -320,23 +320,24 @@ html, body, #root {
   width: 100%;
   max-width: 100%;
   padding: 14px 16px;
-  background: #fff;
-  border: 0.5px solid rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   box-shadow: none;
   color-scheme: light;
   font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .inline-tool-card--panel {
-  padding: 16px 18px;
-  border-radius: 14px;
+  padding: 16px 0;
+  border-radius: 0;
 }
 
 .inline-tool-card--frozen {
-  padding: 12px 14px;
-  border-left: 3px solid rgba(13, 13, 13, 0.12);
-  background: rgba(13, 13, 13, 0.02);
+  padding: 12px 0;
+  border-left: none;
+  background: transparent;
+  opacity: 0.72;
 }
 
 .inline-tool-card__title {
@@ -485,6 +486,12 @@ html, body, #root {
   min-width: 0;
 }
 
+/* First assistant turn: same lane as conversation, no card chrome */
+.outline-response.app-content {
+  gap: 0;
+  align-self: stretch;
+}
+
 /* Stacked Canva widgets in thread (get started + flow + generating) */
 .canva-widget-stack {
   display: flex;
@@ -629,42 +636,28 @@ html, body, #root {
   line-height: 23px;
 }
 
-/* Outline page - deck outline before choose how to get started */
+/* Assistant reply (outline / prose) — flush on canvas, ChatGPT-style: no box border */
 .outline-container {
-  padding: 24px;
-  background: #fff;
-  border-radius: 24px;
-  box-shadow: 0px 6px 12px 0px rgba(0, 0, 0, 0.05);
-  border: 0.5px solid rgba(13, 13, 13, 0.08);
-}
-
-.outline-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #0d0d0d;
-  margin: 0 0 4px;
-  letter-spacing: -0.5px;
-}
-
-.outline-subtitle {
-  font-size: 12px;
-  color: #848484;
-  margin: 0 0 24px;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  max-width: 768px;
 }
 
 .outline-sections {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
 }
 
 .outline-section {
-  padding-bottom: 24px;
-  border-bottom: 1px solid rgba(13, 13, 13, 0.08);
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .outline-section:last-of-type {
-  border-bottom: none;
   padding-bottom: 0;
 }
 
@@ -674,35 +667,50 @@ html, body, #root {
   color: #0d0d0d;
   margin: 0 0 8px;
   letter-spacing: -0.16px;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .outline-section-desc {
-  font-size: 14px;
-  color: rgba(13, 13, 13, 0.8);
+  font-size: 16px;
+  color: #0d0d0d;
   margin: 0 0 12px;
-  line-height: 1.6;
-  letter-spacing: -0.14px;
+  line-height: 1.5;
+  letter-spacing: -0.16px;
 }
 
 .outline-section-points {
   margin: 0;
-  padding-left: 20px;
-  font-size: 13px;
-  line-height: 1.7;
-  color: rgba(13, 13, 13, 0.75);
+  padding-left: 1.25em;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #0d0d0d;
+  letter-spacing: -0.16px;
 }
 
 .outline-section-points li {
   margin-bottom: 6px;
 }
 
+.assistant-prose-body {
+  white-space: pre-wrap;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #0d0d0d;
+  margin: 0;
+  letter-spacing: -0.16px;
+}
+
+.assistant-bullet-list {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
 .options-container {
-  padding: 24px;
-  background: #fff;
-  border-radius: 24px;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
   box-shadow: none;
-  border: 0.5px solid rgba(13, 13, 13, 0.08);
+  border: none;
   max-width: 100%;
   min-width: 0;
 }
@@ -728,18 +736,17 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px;
-  background: #fff;
-  border: 0.5px solid rgba(13, 13, 13, 0.15);
-  border-radius: 24px;
+  padding: 12px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   box-shadow: none;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: background 0.2s;
 }
 
 .card:hover {
-  border-color: rgba(13, 13, 13, 0.2);
-  background: rgba(13, 13, 13, 0.02);
+  background: rgba(13, 13, 13, 0.03);
 }
 
 .card-autofill-coming-soon {
