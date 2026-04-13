@@ -692,7 +692,7 @@ Clear recommendations and what you need from the audience. Make the ask specific
   const renderWidgetInner = (w, idx) => {
     const past = idx < widgetEntries.length - 1
     const dis = past || secondaryPanelLoading
-    const title = `Widget ${idx + 4}`
+    const title = `Widget ${idx + 2}`
 
     if (w.variant === 'generating') {
       return (
@@ -962,67 +962,23 @@ Clear recommendations and what you need from the audience. Make the ask specific
                     <span>Canva</span>
                   </div>
                   <div className="options-container">
-                    <div className="cards-row">
-                      <div className="card card--template-placeholder">
-                        <CanvaWidgetPlaceholder
-                          layout="card"
-                          title="Widget 1"
-                          subtitle="Start from conversation context. Wire to your generate tool."
-                          primaryLabel="Continue"
-                          primaryDisabled={!chooserInteractive || secondaryPanelLoading}
-                          onPrimary={() => {
-                            if (!chooserInteractive) return
-                            runAfterSecondaryLoad(() => {
-                              setCanvaThread((t) => {
-                                const withSnap = snapshotPreviousTailWidget(t)
-                                return [...withSnap, { id: newCanvaThreadId(), type: 'widget', variant: 'generate-from-scratch' }]
-                              })
-                              setCreateExistingItem(null)
-                            })
-                          }}
-                        />
-                      </div>
-                      <div className="card card--template-placeholder">
-                        <CanvaWidgetPlaceholder
-                          layout="card"
-                          title="Widget 2"
-                          subtitle="Use a template or file the user already has."
-                          primaryLabel="Continue"
-                          primaryDisabled={!chooserInteractive || secondaryPanelLoading}
-                          onPrimary={() => {
-                            if (!chooserInteractive) return
-                            setFlowStep('create-from-existing')
-                            runAfterSecondaryLoad(() => {
-                              setCanvaThread((t) => {
-                                const withSnap = snapshotPreviousTailWidget(t)
-                                return [...withSnap, { id: newCanvaThreadId(), type: 'widget', variant: 'create-from-existing' }]
-                              })
-                              setCreateExistingItem(brandTemplates[0])
-                              setPreSelectedDesign(null)
-                            })
-                          }}
-                        />
-                      </div>
-                      <div className="card card--template-placeholder">
-                        <CanvaWidgetPlaceholder
-                          layout="card"
-                          title="Widget 3"
-                          subtitle="Fill brand layouts from structured tool output."
-                          primaryLabel="Continue"
-                          primaryDisabled={!chooserInteractive || secondaryPanelLoading}
-                          onPrimary={() => {
-                            if (!chooserInteractive) return
-                            runAfterSecondaryLoad(() => {
-                              setCanvaThread((t) => {
-                                const withSnap = snapshotPreviousTailWidget(t)
-                                return [...withSnap, { id: newCanvaThreadId(), type: 'widget', variant: 'brand-autofill' }]
-                              })
-                              setCreateExistingItem(null)
-                            })
-                          }}
-                        />
-                      </div>
-                    </div>
+                    <CanvaWidgetPlaceholder
+                      layout="panel"
+                      title="Widget"
+                      subtitle="Start from conversation context, a template, or structured tool output."
+                      primaryLabel="Continue"
+                      primaryDisabled={!chooserInteractive || secondaryPanelLoading}
+                      onPrimary={() => {
+                        if (!chooserInteractive) return
+                        runAfterSecondaryLoad(() => {
+                          setCanvaThread((t) => {
+                            const withSnap = snapshotPreviousTailWidget(t)
+                            return [...withSnap, { id: newCanvaThreadId(), type: 'widget', variant: 'generate-from-scratch' }]
+                          })
+                          setCreateExistingItem(null)
+                        })
+                      }}
+                    />
                   </div>
                   <div className="chatgpt-follow-up chatgpt-follow-up--post-widget">
                     <p className="chatgpt-follow-up-text">{chooserFollowUpText}</p>
