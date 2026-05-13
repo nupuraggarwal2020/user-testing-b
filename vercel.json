@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "cd chatgpt-app && npm ci",
+  "buildCommand": "cd chatgpt-app && npm run build:all",
+  "outputDirectory": "dist",
+  "build": {
+    "env": {
+      "VITE_BRAND_VARIANT": "b"
+    }
+  },
+  "rewrites": [
+    { "source": "/canva-app/:path*", "destination": "/canva-app/index.html" },
+    { "source": "/:path*", "destination": "/index.html" }
+  ]
+}
