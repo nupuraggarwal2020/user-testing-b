@@ -31,8 +31,14 @@ jobs:
         run: npm ci
         working-directory: chatgpt-app
 
-      - name: Build chatgpt-app + Canva editor (Variant B baked in)
-        run: npm run build:all
+      - name: Build chatgpt-app (Variant B baked in)
+        # We only build the chatgpt-app shell here. The embedded Canva
+        # editor at chatgpt-app/public/canva-app/ is a pre-built bundle
+        # committed to the repo (it depends on private @canva-ct/* npm
+        # packages so we cannot rebuild it on GitHub-hosted runners).
+        # Vite automatically copies everything in public/ into dist/,
+        # so dist/canva-app/ ends up correctly populated.
+        run: npm run build
         working-directory: chatgpt-app
         env:
           GITHUB_PAGES: true

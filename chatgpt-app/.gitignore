@@ -13,8 +13,14 @@ dist-ssr
 *.local
 .env
 
-# Built Canva editor app (rebuild with: cd "AI Presentation Canva Templates" && npx vite build --outDir ../chatgpt-app/public/canva-app)
-public/canva-app/
+# NOTE: chatgpt-app/public/canva-app/ used to be gitignored because it's a
+# build artifact of the sibling "AI Presentation Canva Templates" Vite app.
+# Vercel/GitHub Pages cannot rebuild it on their runners — it depends on
+# private @canva-ct/* npm packages — so we commit the pre-built bundle
+# directly. To refresh it locally:
+#   cd "AI Presentation Canva Templates"
+#   npx vite build --outDir ../chatgpt-app/public/canva-app
+# then commit the updated files under chatgpt-app/public/canva-app/.
 
 # Editor directories and files
 .vscode/*

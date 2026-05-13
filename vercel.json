@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "cd chatgpt-app && npm ci",
-  "buildCommand": "cd chatgpt-app && npm run build:all",
+  "buildCommand": "cd chatgpt-app && npm run build",
   "outputDirectory": "dist",
   "build": {
     "env": {
