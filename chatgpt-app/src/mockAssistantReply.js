@@ -57,7 +57,7 @@ function defaultProseBody(lower) {
  * @param {string} raw
  * @returns {{
  *   mode: 'outline' | 'prose' | 'bullets',
- *   sections?: Array<{ num: number, title: string, desc: string, points: string[] }>,
+ *   sections?: Array<{ num: number, title: string, desc: string }>,
  *   prose?: string,
  *   bullets?: string[],
  *   followUp: string,
@@ -69,45 +69,49 @@ export function getAssistantResponseFromPrompt(raw) {
   const topic = extractTopic(text)
 
   if (wantsPresentationOutline(lower, text)) {
-    const label = topic || 'your presentation'
+    const label = truncate(topic || 'your presentation', 80)
     return {
       mode: 'outline',
       sections: [
         {
           num: 1,
-          title: `Cover — ${truncate(label, 48)}`,
-          desc: `Opening slide that names the topic and sets context for ${truncate(label, 40)}.`,
-          points: ['Title & subtitle', 'Speaker or team', 'Date / audience'],
+          title: 'Introduction & Context',
+          desc: `This deck sets the stage for ${label} so the audience understands who is in the room, what we set out to do, and why it matters today. We anchor the story in the customer, the market moment, and the outcome we are working toward together. Use this slide to introduce the team, frame the goal, and earn permission to keep going.`,
         },
         {
           num: 2,
-          title: 'Agenda',
-          desc: 'Preview sections so listeners know what to expect.',
-          points: ['3–5 sections mapped to your story', 'Optional timing hints'],
+          title: 'The opportunity',
+          desc: `Markets are shifting fast and customer expectations are climbing. There is a clear opening to lead with smarter operations, sharper insight, and more personalized experiences for ${label}. This section reframes the moment as an opportunity rather than a threat, and shows what is now possible that was not possible before.`,
         },
         {
           num: 3,
-          title: 'Problem / context',
-          desc: 'Why this matters now — pain, gap, or opportunity.',
-          points: ['Current state', 'Stakeholder impact', 'Why act now'],
+          title: 'Strategic approach',
+          desc: `We bring together people, process, and technology so ${label} can move from disconnected tools to a single, calm system of record. The approach focuses on quick wins in the first 30 days, deeper integration in the first quarter, and durable change in the first year. Each step is sequenced so the team is never left without value.`,
         },
         {
           num: 4,
-          title: 'Approach or solution',
-          desc: 'Your answer: product, plan, or recommendation.',
-          points: ['Core idea', 'How it works', 'Differentiators'],
+          title: 'Solution overview',
+          desc: `Here we walk through the product or program at a glance — the core capabilities, the workflows it unlocks, and how it slots into the day-to-day for ${label}. We keep it concrete: what people see, what they click, and what changes for them on Monday morning. Differentiators are highlighted, not exhaustively listed.`,
         },
         {
           num: 5,
-          title: 'Proof & depth',
-          desc: 'Evidence, demo, data, or case that builds confidence.',
-          points: ['Metrics or examples', 'Risks & mitigations', 'Roadmap or scope'],
+          title: 'Proof & customer story',
+          desc: `Confidence comes from evidence. We share two or three short proof points — a metric, a customer quote, and a before-and-after — that show this approach already works in the wild. Where relevant, we draw a direct line from a similar customer's challenge to the result they achieved with us.`,
         },
         {
           num: 6,
-          title: 'Next steps',
-          desc: 'Specific ask: decision, pilot, follow-up, or resources.',
-          points: ['Single primary CTA', 'Owner & timeline', 'How to stay in touch'],
+          title: 'Roadmap & rollout',
+          desc: `The next ninety days are mapped into pragmatic milestones: pilot, expand, and operationalize. Each phase has named owners on both sides, clear success metrics, and a check-in cadence. The roadmap is built to flex if priorities shift, but firm enough to commit to.`,
+        },
+        {
+          num: 7,
+          title: 'Pricing & investment',
+          desc: `We outline what is included, how the commercial model works, and what the total investment looks like for ${label} over the term. The goal is to make the value-to-cost trade transparent — what is fixed, what scales with usage, and where the team can ramp up or down.`,
+        },
+        {
+          num: 8,
+          title: 'Next steps & ask',
+          desc: `We close with a single, specific ask: align on a pilot scope this week, confirm the executive sponsor, and book the working session for next Tuesday. Clear owners, clear dates, and a one-page recap will follow within 24 hours so momentum carries into the next conversation.`,
         },
       ],
       followUp:

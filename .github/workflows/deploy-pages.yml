@@ -31,11 +31,15 @@ jobs:
         run: npm ci
         working-directory: chatgpt-app
 
-      - name: Build
-        run: npm run build
+      - name: Build chatgpt-app + Canva editor (Variant B baked in)
+        run: npm run build:all
         working-directory: chatgpt-app
         env:
           GITHUB_PAGES: true
+          # Bake the brand variant into the deployed bundle so the shared
+          # link defaults to Variant B (no ?variant= query string needed).
+          # Change to 'a' (or remove) to publish the control variant instead.
+          VITE_BRAND_VARIANT: b
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

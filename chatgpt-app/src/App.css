@@ -340,14 +340,17 @@ html, body, #root {
   opacity: 0.72;
 }
 
+/* Text/Body/iOS/Emphasized — shared widget heading typography */
 .inline-tool-card__title {
   margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 20px;
-  color: #0d0d0d;
-  letter-spacing: -0.15px;
-  font-family: inherit;
+  color: var(--text-primary, #0D0D0D);
+  font-family: var(--font-use, "SF Pro");
+  font-size: 17px;
+  font-style: normal;
+  font-weight: 510;
+  line-height: 23px; /* 135.294% */
+  letter-spacing: -0.43px;
+  font-feature-settings: 'liga' off, 'clig' off;
 }
 
 .inline-tool-card__subtitle {
@@ -644,41 +647,56 @@ html, body, #root {
   box-shadow: none;
   border: none;
   max-width: 768px;
+  width: 100%;
 }
 
-.outline-sections {
+/* Outline cards — shared between the chat-thread reply and the Review outline
+   overlay. Figma node 2274:27998 et al. */
+.outline-cards {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 12px;
+  width: 100%;
 }
 
-.outline-section {
-  padding-bottom: 0;
-  border-bottom: none;
+.outline-card {
+  background: #fff;
+  border: 0.5px solid #d2d2d2;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.outline-section:last-of-type {
-  padding-bottom: 0;
+/* First card uses the chat-bubble shape (BL square) per Figma so the card
+   reads as the assistant's first reply. */
+.outline-card--first {
+  border-bottom-left-radius: 0;
 }
 
-.outline-section-title {
-  font-size: 16px;
-  font-weight: 600;
+.outline-card-title {
+  margin: 0;
+  font-family: "SF Pro", "Canva Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.2;
+  letter-spacing: -0.32px;
   color: #0d0d0d;
-  margin: 0 0 8px;
-  letter-spacing: -0.16px;
-  line-height: 1.5;
 }
 
-.outline-section-desc {
-  font-size: 16px;
-  color: #0d0d0d;
-  margin: 0 0 12px;
-  line-height: 1.5;
-  letter-spacing: -0.16px;
+.outline-card-desc {
+  margin: 0;
+  font-family: "SF Pro", "Canva Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.3px;
+  color: #5d5d5d;
+  white-space: pre-wrap;
 }
 
-.outline-section-points {
+.assistant-bullet-list {
   margin: 0;
   padding-left: 1.25em;
   font-size: 16px;
@@ -687,7 +705,7 @@ html, body, #root {
   letter-spacing: -0.16px;
 }
 
-.outline-section-points li {
+.assistant-bullet-list li {
   margin-bottom: 6px;
 }
 
@@ -2060,157 +2078,590 @@ html, body, #root {
   flex-shrink: 0;
 }
 
-/* Generating design widget - Figma 1332-96481 */
+/* Generating design widget — Figma nodes 3358:51230 → 3358:51980.
+   ~60s total across 5 milestones; phase labels rotate, hero progressively
+   gains structure (inner frame → skeletons → image rect → real hero).
+   Easing references (Emil): strong-out cb(0.23, 1, 0.32, 1), iOS cb(0.32, 0.72, 0, 1). */
 .generating-widget {
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
   gap: 16px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  isolation: isolate;
+  animation: generating-widget-mount 480ms var(--ease-out-strong) both;
 }
 
+@keyframes generating-widget-mount {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Single-page (non-presentation) variant — no slot row, no border / padding shell.
+   The main preview stands on its own under the status block. */
+.generating-widget--single {
+  border: none;
+  padding: 0;
+  background: transparent;
+  gap: 12px;
+}
+
+.generating-widget[data-past='true'] .generating-conic-gradient,
+.generating-widget[data-past='true'] .generating-slide-gradient,
+.generating-widget[data-past='true'] .generating-status-line__phase {
+  animation-play-state: paused;
+}
+
+/* Figma node 3358:51394 — Prog copy: single line, gradient phase + grey tail. */
+.generating-status-block {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 4px 0;
+}
+
+.generating-status-line {
+  margin: 0;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  line-height: 19px;
+  letter-spacing: -0.16px;
+  font-weight: 400;
+  color: #8f8f8f;
+}
+
+/* Gradient brand keyword (teal → purple, Figma's gradient/brand-diagonal-bg).
+   The animated background pan gives the keyword a subtle living shimmer
+   without the gimmick of a hard wipe. */
+.generating-status-line__phase {
+  display: inline;
+  font-weight: 500;
+  background: linear-gradient(
+    169.3deg,
+    #00c4cc 0%,
+    #5a32fa 50%,
+    #7d2ae8 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation:
+    generating-phase-in 480ms var(--ease-out-strong) both,
+    generating-phase-shimmer 7s linear infinite;
+}
+
+.generating-status-line__tail {
+  color: #8f8f8f;
+  font-weight: 400;
+}
+
+/* End-state copy — Figma node 3358:52203 "Progressive copy" / "Design Finalized".
+   Identical typography to the loading-state progressive-copy lines (regular weight,
+   grey #8f8f8f, 16px / -0.16px tracking) but without the gradient mask, so the line
+   reads as a settled, finished status. */
+.generating-status-line__done {
+  display: inline;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: normal;
+  letter-spacing: -0.16px;
+  color: #8f8f8f;
+  white-space: nowrap;
+  animation: generating-phase-in 480ms var(--ease-out-strong) both;
+}
+
+/* Variant B loading-state status line — Figma 3058:8284 "inline" + 3058:8155
+   NotificationDot. Single static copy + a small pulsing brand-purple dot to
+   the left, persisted for the entire ~60s generation. Reuses the same SF Pro
+   16px / -0.16px / #8f8f8f typography as the Variant A "done" copy so the
+   line settles consistently across stages. */
+.generating-status-line__variant-b {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "SF Pro", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: normal;
+  letter-spacing: -0.16px;
+  color: #8f8f8f;
+  animation: generating-phase-in 480ms var(--ease-out-strong) both;
+}
+
+.generating-status-line__variant-b-text {
+  display: inline-block;
+}
+
+.generating-status-line__dot {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #7d2ae8;
+}
+
+/* Soft expanding "halo" ring around the dot — mirrors the Figma NotificationDot
+   pulse asset (3058:8156 _Dot animation). Pure transform + opacity so it stays
+   on the GPU compositor. */
+.generating-status-line__dot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #7d2ae8;
+  opacity: 0.5;
+  transform: scale(1);
+  animation: generating-pulse 1.2s var(--ease-out-soft) infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes generating-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes generating-phase-in {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes generating-phase-shimmer {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: -220% 0%;
+  }
+}
+
+/* Main preview area — animated conic gradient under a soft white veil */
 .generating-preview-area {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  max-height: 320px;
-  border-radius: 16px;
+  aspect-ratio: 736 / 398;
+  border-radius: 12px;
   overflow: hidden;
   background: #ffffff;
+  isolation: isolate;
+  animation: generating-preview-mount 600ms var(--ease-out-soft) 80ms both;
 }
 
-.generating-gradient-bg {
+@keyframes generating-preview-mount {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.generating-widget--single .generating-preview-area {
+  border-radius: 16px;
+  aspect-ratio: 16 / 9;
+}
+
+/* Soft pastel conic — Figma node 3358:51298 uses a heavily white-overlaid
+   conic gradient (85% white veil) so the surface reads as soft mint→lavender,
+   not a vivid spectrum. Veil + larger blur amplify that pastel feel. */
+.generating-conic-gradient {
   position: absolute;
-  inset: 0;
+  inset: -50%;
   z-index: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(139, 61, 255, 0.25) 0%,
-    rgba(139, 61, 255, 0.12) 40%,
-    rgba(139, 61, 255, 0.06) 70%,
-    rgba(255, 255, 255, 0.95) 100%
+  background: conic-gradient(
+    from 90deg,
+    #7d2ae8 0%,
+    #5a32fa 25%,
+    #4457ef 31.25%,
+    #2d7be3 37.5%,
+    #17a0d8 43.75%,
+    #0bb2d2 46.875%,
+    #00c4cc 50%,
+    #0bb2d2 53.125%,
+    #17a0d8 56.25%,
+    #2d7be3 62.75%,
+    #4457ef 69.125%,
+    #5a32fa 75.5%,
+    #7d2ae8 100%
   );
-  background-size: 200% 200%;
-  animation: generating-gradient-shift 4s ease-in-out infinite;
-  transition: opacity 0.5s ease-out;
+  filter: blur(48px);
+  animation: generating-conic-rotate 22s linear infinite;
+  will-change: transform;
 }
 
-.generating-gradient-bg.faded {
-  opacity: 0;
-  pointer-events: none;
+@keyframes generating-conic-rotate {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.generating-preview-bg {
+.generating-preview-veil {
   position: absolute;
   inset: 0;
   z-index: 1;
-}
-
-.generating-preview-bg-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: blur(8px);
-  transition: filter 0.5s ease-out;
-}
-
-.generating-preview-bg-img.unblurred {
-  filter: blur(0);
-}
-
-@keyframes generating-gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .generating-preview-content {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
+  bottom: 14%;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.generating-preview-content > * {
+  pointer-events: auto;
+}
+
+/* End-state bottom darken band — Figma 3358:51980 Rectangle 1591333638.
+   164/398 ≈ 41% of hero height, fades from transparent purple to 80% black. */
+.generating-hero-bottom-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 41%;
+  z-index: 4;
+  background: linear-gradient(180deg, rgba(60, 4, 112, 0) 0%, rgba(0, 0, 0, 0.8) 100%);
+  border-radius: 0 0 12px 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 600ms var(--ease-out-soft) 80ms;
+}
+
+.generating-hero-bottom-fade.is-visible {
+  opacity: 1;
+}
+
+/* Milestone 2 — inner design canvas frame inside the hero.
+   A slightly lighter rounded surface that appears as the design takes shape. */
+.generating-inner-frame {
+  position: absolute;
+  inset: 6.5% 4.5%;
   z-index: 2;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(125, 42, 232, 0.06),
+    0 8px 24px -10px rgba(125, 42, 232, 0.18);
+  opacity: 0;
+  transform: scale(0.985);
+  transition:
+    opacity 720ms var(--ease-out-soft),
+    transform 720ms var(--ease-out-soft);
+  overflow: hidden;
+}
+
+.generating-inner-frame.is-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Milestone 3 — text-line skeleton bars stacked in the inner frame's top-left.
+   Light lavender bars (#d8caf5) with a gentle pulse to feel "active". */
+.generating-skeletons {
+  position: absolute;
+  top: 12%;
+  left: 7%;
+  right: 7%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 24px 24px 20px;
+  gap: 14px;
+  opacity: 0;
+  transition: opacity 560ms var(--ease-out-soft);
 }
 
-.generating-preview-text {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 400;
-  color: #0d0d0d;
-  text-align: center;
-  max-width: 400px;
-  line-height: 1.5;
+.generating-skeletons.is-visible {
+  opacity: 1;
 }
 
-.generating-open-canva-btn {
-  padding: 10px 20px;
-  background: #8b3dff;
-  color: #fff;
-  border: none;
+.generating-skeleton-bar {
+  display: block;
+  height: 12px;
   border-radius: 999px;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s;
+  background: linear-gradient(90deg, #c9b8ec 0%, #a583e0 50%, #c9b8ec 100%);
+  background-size: 200% 100%;
+  opacity: 0;
+  transform: translateY(4px);
+  animation:
+    generating-skeleton-mount 440ms var(--ease-out-soft) forwards,
+    generating-skeleton-shimmer 2.6s linear 600ms infinite;
 }
 
-.generating-open-canva-btn:hover {
-  background: #7a2eeb;
+.generating-skeletons.is-visible .generating-skeleton-bar {
+  animation-play-state: running;
 }
 
-.generating-slides-row {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  -webkit-overflow-scrolling: touch;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
+@keyframes generating-skeleton-mount {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.generating-slides-row::-webkit-scrollbar {
-  height: 6px;
+@keyframes generating-skeleton-shimmer {
+  0% { background-position: 0% 0%; }
+  100% { background-position: -200% 0%; }
 }
 
-.generating-slides-row::-webkit-scrollbar-thumb {
-  background: rgba(13, 13, 13, 0.2);
-  border-radius: 3px;
+/* Milestone 4 — solid-fill image rectangle in the top-right of the inner frame. */
+.generating-image-rect {
+  position: absolute;
+  top: 14%;
+  right: 7%;
+  width: 28%;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #c9b8ec 0%, #a583e0 100%);
+  opacity: 0;
+  transform: scale(0.96);
+  transition:
+    opacity 520ms var(--ease-out-soft),
+    transform 520ms var(--ease-out-soft);
 }
 
-.generating-slide-thumb {
-  flex-shrink: 0;
-  width: 120px;
-  aspect-ratio: 16 / 9;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #ffffff;
+.generating-image-rect.is-visible {
+  opacity: 1;
+  transform: scale(1);
 }
 
-.generating-slide-thumb img {
+/* End state — real Deploy 2026 hero replaces the loading layers. */
+.generating-final-hero {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 0;
+  transform: scale(1.01);
+  transition:
+    opacity 700ms var(--ease-out-soft),
+    transform 800ms var(--ease-out-soft);
+  pointer-events: none;
 }
 
+.generating-final-hero.is-visible {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+/* When the hero swaps to the real image, dial the loading layers back. */
+.generating-widget[data-stage='4'] .generating-conic-gradient,
+.generating-widget[data-stage='4'] .generating-preview-veil,
+.generating-widget[data-stage='4'] .generating-inner-frame {
+  opacity: 0;
+  transition: opacity 600ms var(--ease-out-soft);
+}
+
+/* End-state CTA — white pill with Canva logo, matches Figma frame 3358:51980. */
+.generating-open-canva-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 8px 18px 8px 14px;
+  background: #ffffff;
+  color: #0d0d0d;
+  border: none;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.18px;
+  font-family: inherit;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(6px) scale(0.96);
+  pointer-events: none;
+  box-shadow:
+    0 1px 2px rgba(13, 13, 13, 0.08),
+    0 8px 24px -6px rgba(13, 13, 13, 0.22);
+  transition:
+    background 160ms var(--ease-out-strong),
+    opacity 480ms var(--ease-out-strong) 120ms,
+    transform 480ms var(--ease-out-strong) 120ms,
+    box-shadow 200ms var(--ease-out-strong);
+}
+
+.generating-preview-area.is-ready .generating-open-canva-btn,
+.generating-preview-area--variant-b .generating-open-canva-btn {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.generating-open-canva-btn__icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+.generating-open-canva-btn:hover {
+  background: #f7f7f8;
+  box-shadow:
+    0 1px 2px rgba(13, 13, 13, 0.1),
+    0 10px 28px -6px rgba(13, 13, 13, 0.26);
+}
+
+.generating-open-canva-btn:active {
+  transform: scale(0.97);
+}
+
+.generating-open-canva-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Figma node 3358:51388 — slide ticker. Max 5 slots, enter 1-by-1.
+   Slot dimensions 102×61 per node 3358:51389 (aspect 102/61). */
+.generating-slides-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding: 4px 0 6px;
+}
+
+.generating-slide-slot {
+  flex: 0 0 102px;
+  width: 102px;
+  aspect-ratio: 102 / 61;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  background: #ffffff;
+  opacity: 0;
+  transform: translateY(10px) scale(0.94);
+  transition:
+    opacity 460ms var(--ease-out-soft),
+    transform 460ms var(--ease-out-soft);
+  isolation: isolate;
+}
+
+.generating-slide-slot.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Same blurred conic as the hero — no diagonal seam since the gradient is
+   circular and the surrounding white veil flattens everything to pastel. */
 .generating-slide-gradient {
+  position: absolute;
+  inset: -60%;
+  z-index: 0;
+  background: conic-gradient(
+    from 90deg,
+    #7d2ae8 0%,
+    #5a32fa 25%,
+    #4457ef 31.25%,
+    #2d7be3 37.5%,
+    #17a0d8 43.75%,
+    #0bb2d2 46.875%,
+    #00c4cc 50%,
+    #0bb2d2 53.125%,
+    #17a0d8 56.25%,
+    #2d7be3 62.75%,
+    #4457ef 69.125%,
+    #5a32fa 75.5%,
+    #7d2ae8 100%
+  );
+  filter: blur(22px);
+  animation: generating-conic-rotate 18s linear infinite reverse;
+  will-change: transform;
+  transition: opacity 480ms var(--ease-out-soft);
+}
+
+/* Soft white veil so the tile reads as pastel, not vivid spectrum. */
+.generating-slide-slot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.86);
+  pointer-events: none;
+  transition: opacity 480ms var(--ease-out-soft);
+}
+
+/* End state — real slide thumbnail fades in over the gradient placeholder. */
+.generating-slide-thumb {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    135deg,
-    rgba(139, 61, 255, 0.25) 0%,
-    rgba(139, 61, 255, 0.15) 40%,
-    rgba(139, 61, 255, 0.08) 70%,
-    rgba(255, 255, 255, 0.9) 100%
-  );
-  background-size: 200% 200%;
-  animation: generating-gradient-shift 4s ease-in-out infinite;
+  object-fit: cover;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 520ms var(--ease-out-soft);
+}
+
+.generating-slide-slot.is-ready .generating-slide-thumb {
+  opacity: 1;
+}
+
+.generating-slide-slot.is-ready .generating-slide-gradient,
+.generating-slide-slot.is-ready::after {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .generating-widget,
+  .generating-preview-area {
+    animation: none;
+  }
+  .generating-conic-gradient,
+  .generating-slide-gradient,
+  .generating-status-line__phase,
+  .generating-status-line__done,
+  .generating-status-line__variant-b,
+  .generating-status-line__dot::before {
+    animation: none;
+  }
+  .generating-slide-slot {
+    transition: opacity 200ms ease;
+    transform: none;
+  }
+  .generating-open-canva-btn {
+    transition: opacity 200ms ease, background 160ms ease;
+  }
 }
 
 .template-empty {
@@ -2693,70 +3144,6 @@ html, body, #root {
   min-width: 0;
 }
 
-/* Live generation banner above the thumbnail */
-.generating-live-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 14px;
-  background: rgba(139, 61, 255, 0.05);
-  border: 1px solid rgba(139, 61, 255, 0.15);
-  border-radius: 12px;
-}
-
-.generating-live-banner-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex: 1;
-}
-
-.generating-live-dot {
-  display: block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #8b3dff;
-  flex-shrink: 0;
-  animation: chatgpt-loading-dot-flicker 1.4s ease-in-out infinite;
-}
-
-.generating-live-text {
-  font-size: 13px;
-  font-weight: 400;
-  color: rgba(13, 13, 13, 0.75);
-  letter-spacing: -0.13px;
-  line-height: 1.5;
-}
-
-.generating-open-canva-btn--banner {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  background: #8b3dff;
-  color: #fff;
-  border: none;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-
-.generating-open-canva-btn--banner:hover {
-  background: #7a2eeb;
-}
-
-.generating-open-canva-btn--banner svg {
-  flex-shrink: 0;
-}
-
 /* Inline link inside follow-up helper (same color as body text) */
 .chatgpt-follow-up-inline-link {
   color: inherit;
@@ -2854,4 +3241,1511 @@ html, body, #root {
 
 .next-screen-message button:hover {
   opacity: 0.9;
+}
+
+/* ─── Style selection widget (Figma 2901:23630) ──────────────────────────── */
+.style-selection-widget {
+  position: relative;
+  width: 100%;
+  max-width: 527px;
+  background: #fff;
+  border: 0.5px solid rgba(13, 13, 13, 0.15);
+  border-radius: 24px;
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.05);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  font-family: inherit;
+}
+
+/* Figma node 2901:23639 — "Visual reference" */
+/* Title + Change reference in same row (recent-design / surprise-me modes) */
+.style-selection-widget__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.style-selection-widget__title-row .style-selection-widget__title {
+  margin: 0;
+}
+
+.style-selection-widget__title {
+  margin: 0 0 16px;
+  color: var(--text-primary, #0D0D0D);
+  font-family: var(--font-use, "SF Pro");
+  font-size: 17px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 23px;
+  letter-spacing: -0.43px;
+  font-feature-settings: 'liga' off, 'clig' off;
+}
+
+/* Figma node 2901:23713 / 2901:23718 — kit picker + change reference row */
+.style-selection-widget__kit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  position: relative;
+}
+
+/* Figma node 2901:23718 — "Change reference" button (grey, no border) */
+.style-selection-widget__change-ref-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 6px 16px;
+  background: rgba(13, 13, 13, 0);
+  border: none;
+  border-radius: 999px;
+  color: #8c8e92;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  font-family: var(--font-use, "SF Pro");
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: -0.08px;
+  font-feature-settings: 'liga' off, 'clig' off;
+  white-space: nowrap;
+}
+
+.style-selection-widget__change-ref-btn:hover:not(:disabled) {
+  background: rgba(13, 13, 13, 0.04);
+}
+
+.style-selection-widget__change-ref-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* v2 variant — same shell as the legacy button, only the icon character is
+   different. The hook is here so we can dial in the v2 spacing/colour without
+   touching the legacy rule, and so flipping BRAND_REFRESH_V2 off in App.jsx
+   leaves zero residual styling. */
+.style-selection-widget__change-ref-btn--v2 {
+  gap: 6px;
+}
+
+/* Brand-kit dropdown pill */
+.style-selection-widget__brand-kit-wrap {
+  position: relative;
+  align-self: flex-start;
+}
+
+.style-selection-widget__brand-kit {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 8px 16px;
+  background: rgba(13, 13, 13, 0);
+  border: 1px solid rgba(13, 13, 13, 0.1);
+  border-radius: 999px;
+  color: var(--text-primary, #0D0D0D);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  font-family: inherit;
+}
+
+/* Figma node 2901:23713 — borderless variant used in the main kit row */
+.style-selection-widget__brand-kit--slim {
+  border-color: transparent;
+  padding-left: 4px;
+}
+
+.style-selection-widget__brand-kit:hover:not(:disabled) {
+  background: rgba(13, 13, 13, 0.04);
+}
+
+.style-selection-widget__brand-kit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.style-selection-widget__brand-kit-icon {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.style-selection-widget__brand-kit-icon svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.style-selection-widget__brand-kit-logo {
+  display: block;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* All-BT treatment for the brand-kit pill icon — the 24×24 PNG sits centred
+   on a soft grey tile so the pill matches the menu row visually. */
+.style-selection-widget__brand-kit-icon--bg {
+  align-items: center;
+  justify-content: center;
+  background: #f3f3f3;
+  border-radius: 4px;
+}
+
+.style-selection-widget__brand-kit-icon--bg .style-selection-widget__brand-kit-logo {
+  width: 16px;
+  height: 16px;
+  border-radius: 0;
+}
+
+.style-selection-widget__brand-kit-label {
+  font-family: var(--font-use, "SF Pro");
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.18px;
+  color: var(--interactive-label-secondary-default, #0D0D0D);
+  font-feature-settings: 'liga' off, 'clig' off;
+}
+
+/* Variant B — light-grey "Brand Kit:" prefix before the kit name in the pill,
+   e.g. "Brand Kit: OpenAI". Keeps the same font metrics as the label so the
+   baseline stays aligned. */
+.style-selection-widget__brand-kit-label-prefix {
+  color: rgba(13, 13, 13, 0.5);
+}
+
+/* Variant B — inline glyphs (Recent design / Surprise me) inside the 24px
+   pill icon slot. Centered, with a soft grey backdrop so they read as the
+   same visual weight as a brand-kit logo tile. */
+.style-selection-widget__brand-kit-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.style-selection-widget__brand-kit-icon:has(svg) {
+  align-items: center;
+  justify-content: center;
+  background: #f3f3f3;
+  border-radius: 4px;
+}
+
+.style-selection-widget__brand-kit-chevron {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+.style-selection-widget__brand-kit-chevron svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+/* Brand-kit dropdown menu — anchored under the pill */
+.brand-kit-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 320px;
+  max-width: min(420px, 90vw);
+  background: #fff;
+  border: 0.5px solid var(--border-heavy, rgba(13, 13, 13, 0.15));
+  border-radius: 20px;
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.05);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 10;
+  animation: brand-kit-menu-in 0.12s ease-out;
+}
+
+@keyframes brand-kit-menu-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.brand-kit-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: var(--text-primary, #0D0D0D);
+  transition: background 0.12s;
+}
+
+.brand-kit-menu__item:hover:not(.brand-kit-menu__item--selected) {
+  background: rgba(13, 13, 13, 0.04);
+}
+
+.brand-kit-menu__item--selected {
+  background: rgba(64, 79, 109, 0.08);
+}
+
+.brand-kit-menu__logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.brand-kit-menu__logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* "All Brand Templates" uses a small transparent glyph instead of a full
+   coloured tile (like Canva / DX / Affinity). Give the container a soft grey
+   backdrop and shrink the img so the icon sits centered with padding. */
+.brand-kit-menu__logo--bg {
+  background: #f3f3f3;
+}
+
+.brand-kit-menu__logo--bg img {
+  width: 60%;
+  height: 60%;
+  object-fit: contain;
+}
+
+.brand-kit-menu__label {
+  font-family: var(--font-use, "SF Pro");
+  font-size: 17px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 23px;
+  letter-spacing: -0.43px;
+  color: var(--text-primary, #0D0D0D);
+  font-feature-settings: 'liga' off, 'clig' off;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.style-selection-widget__preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 495 / 281;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 0.554px rgba(64, 79, 109, 0.06),
+    0 2.217px 4.434px 0 rgba(24, 44, 89, 0.14),
+    0 6.651px 13.301px 0 rgba(24, 44, 89, 0.07);
+  background: #f4f0fb;
+  margin-bottom: 12px;
+}
+
+.style-selection-widget__preview-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.style-selection-widget__preview-img--empty {
+  background: linear-gradient(180deg, #f1ebff 0%, #c9b3ff 100%);
+}
+
+.style-selection-widget__preview-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 60%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.8) 100%);
+  pointer-events: none;
+}
+
+.style-selection-widget__preview-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.style-selection-widget__preview-tag {
+  margin: 0;
+  font-family: var(--font-use, "SF Pro");
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 20px;
+  letter-spacing: -0.18px;
+  color: #fff;
+  font-feature-settings: 'liga' off, 'clig' off;
+}
+
+.style-selection-widget__preview-name {
+  margin: 0;
+  font-family: var(--font-use, "SF Pro");
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: -0.18px;
+  color: #fff;
+  font-feature-settings: 'liga' off, 'clig' off;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.style-selection-widget__change-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 6px 14px;
+  background: rgba(13, 13, 13, 0);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: var(--surface-floating-bg, #fff);
+  border-radius: 999px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: var(--font-use, "SF Pro");
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: -0.08px;
+  font-feature-settings: 'liga' off, 'clig' off;
+}
+
+.style-selection-widget__change-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+.style-selection-widget__change-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.style-selection-widget__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.style-selection-widget__btn-secondary,
+.style-selection-widget__btn-primary {
+  height: 40px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  font-family: var(--font-use, "SF Pro");
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.18px;
+  font-feature-settings: 'liga' off, 'clig' off;
+}
+
+.style-selection-widget__btn-secondary {
+  background: rgba(13, 13, 13, 0);
+  border: 1px solid rgba(13, 13, 13, 0.1);
+  color: var(--interactive-label-secondary-default, #0D0D0D);
+}
+
+.style-selection-widget__btn-secondary:hover:not(:disabled) {
+  background: rgba(13, 13, 13, 0.04);
+}
+
+.style-selection-widget__btn-primary {
+  background: var(--action-primary-bg, #8b3dff);
+  border: none;
+  color: var(--interactive-label-primary-default, #fff);
+}
+
+.style-selection-widget__btn-primary:hover:not(:disabled) {
+  background: #7a2eeb;
+}
+
+.style-selection-widget__btn-secondary:disabled,
+.style-selection-widget__btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ─── Change-reference flyout popover ────────────────────────────────────── */
+/* Flyout has a FIXED height so its content (tabs + brand-kit dropdown + cards
+   with name/type labels) is never clipped — regardless of which selection mode
+   the underlying widget is in. The widget itself grows via
+   `.style-selection-widget--flyout-open` so the flyout always fits inside. */
+.style-flyout {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 99px;
+  bottom: auto;
+  height: 344px;
+  background: #fff;
+  border: 0.5px solid var(--border-heavy, rgba(13, 13, 13, 0.15));
+  border-radius: 24px;
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.05); /* elevation/01 */
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 5;
+  overflow: hidden;
+  animation: style-flyout-in 0.12s ease-out;
+}
+
+/* Reserve enough vertical room inside the widget so the fixed-height flyout
+   sits cleanly between the brand-kit row and the bottom padding (99 + 344 +
+   16 = 459). Applied only while the flyout is open so the widget keeps its
+   natural height in the closed/preview state. */
+.style-selection-widget--flyout-open {
+  min-height: 459px;
+}
+
+@keyframes style-flyout-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.style-flyout__tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+.style-flyout__tab {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 8px 8px 8px 12px;
+  background: rgba(14, 19, 24, 0);
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  flex-shrink: 0;
+  color: var(--action-secondary-fg, #0E1318);
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+  outline: none;
+}
+
+.style-flyout__tab:focus-visible {
+  box-shadow: 0 0 0 2px #8b3dff;
+}
+
+.style-flyout__tab:hover:not([aria-selected='true']) {
+  background: rgba(64, 79, 109, 0.04);
+}
+
+.style-flyout__tab--selected {
+  background: var(--action-tertiary-bg-hovered, rgba(64, 79, 109, 0.06));
+}
+
+.style-flyout__tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.style-flyout__tab-icon svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.style-flyout__tab-label {
+  /* body/medium */
+  font-family: var(--fontfamily-sans, "Canva Sans"), inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+  letter-spacing: 0;
+  padding: 0 8px;
+  color: var(--action-secondary-fg, #0E1318);
+  white-space: nowrap;
+}
+
+.style-flyout__divider {
+  height: 1px;
+  width: 100%;
+  background: rgba(13, 13, 13, 0.08);
+}
+
+.style-flyout__cards-wrap {
+  position: relative;
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.style-flyout__cards {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 4px;
+}
+
+.style-flyout__cards::-webkit-scrollbar {
+  display: none;
+}
+
+.style-flyout__card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 177px;
+  min-width: 177px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  scroll-snap-align: start;
+  font: inherit;
+  color: inherit;
+  transition: opacity 0.15s;
+}
+
+.style-flyout__card:hover .style-flyout__card-thumb {
+  border-color: rgba(139, 61, 255, 0.5);
+}
+
+.style-flyout__card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.style-flyout__card-thumb {
+  position: relative;
+  width: 100%;
+  height: 133px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(64, 87, 109, 0.07);
+  border: 2.2px solid transparent;
+  box-shadow:
+    0 0 0 0.5px rgba(64, 79, 109, 0.06),
+    0 2.217px 4.434px 0 rgba(24, 44, 89, 0.14),
+    0 6.651px 13.301px 0 rgba(24, 44, 89, 0.07);
+  transition: border-color 0.15s;
+}
+
+.style-flyout__card--selected .style-flyout__card-thumb {
+  border-color: var(--action-selected-border, #8b3dff);
+}
+
+.style-flyout__card-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.style-flyout__card-check {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.18));
+}
+
+.style-flyout__card-check svg {
+  display: block;
+}
+
+.style-flyout__card-name {
+  margin: 0;
+  font-family: var(--fontfamily-sans, "Canva Sans"), inherit;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
+  color: var(--content-fg, #0F1015);
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.style-flyout__card-type {
+  margin: 0;
+  font-family: var(--fontfamily-sans, "Canva Sans"), inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  color: var(--content-subtlest-fg, rgba(15, 18, 26, 0.7));
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.style-flyout__scroll-fade {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 133px;
+  width: 80px;
+  pointer-events: none;
+  background: linear-gradient(
+    to left,
+    #fff 0%,
+    #fff 40%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 10px;
+}
+
+.style-flyout__scroll-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #fff;
+  border: 1px solid rgba(13, 13, 13, 0.05);
+  border-radius: 999px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  color: #0d0d0d;
+  transition: background 0.15s;
+}
+
+.style-flyout__scroll-btn:hover {
+  background: #f7f7f8;
+}
+
+/* ─── Widget: Surprise me preview state ─────────────────────────────────── */
+.style-selection-widget__preview--surprise {
+  background: #e7dbff;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+}
+
+.style-selection-widget__preview--surprise .style-selection-widget__preview-overlay--light {
+  background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,0.85) 100%);
+}
+
+.style-selection-widget__preview--surprise .style-selection-widget__preview-meta .style-selection-widget__preview-tag {
+  color: #0d0d0d;
+}
+
+.style-selection-widget__preview--surprise .style-selection-widget__preview-meta .style-selection-widget__preview-name {
+  color: #0d0d0d;
+}
+
+.style-selection-widget__surprise-illustration {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  pointer-events: none;
+}
+
+.style-selection-widget__switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 6px 16px;
+  background: rgba(13, 13, 13, 0);
+  border: 1px solid rgba(13, 13, 13, 0.1);
+  border-radius: 999px;
+  font-family: var(--font-use, 'SF Pro');
+  font-size: 13px;
+  font-weight: 510;
+  line-height: 18px;
+  letter-spacing: -0.08px;
+  color: #0d0d0d;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+  pointer-events: auto;
+}
+
+.style-selection-widget__switch-btn:hover:not(:disabled) {
+  background: rgba(13, 13, 13, 0.05);
+  border-color: rgba(13, 13, 13, 0.18);
+}
+
+.style-selection-widget__switch-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─── Flyout: Use recent design ─────────────────────────────────────────── */
+.style-flyout__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px;
+  background: var(--bg-secondary, #f7f7f8);
+  border: 1px solid var(--border-default, rgba(13, 13, 13, 0.1));
+  border-radius: 10px;
+}
+
+.style-flyout__search-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.style-flyout__search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  color: var(--text-primary, #0d0d0d);
+  min-width: 0;
+}
+
+.style-flyout__search-input::placeholder {
+  color: var(--text-tertiary, #8f8f8f);
+}
+
+.style-flyout__card-thumb-empty {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #ede7ff 0%, #c4a8ff 100%);
+  border-radius: 6px;
+}
+
+.style-flyout__no-results {
+  font-size: 13px;
+  color: var(--text-tertiary, #8f8f8f);
+  padding: 16px 4px;
+  white-space: nowrap;
+}
+
+/* ─── Flyout: Surprise me ───────────────────────────────────────────────── */
+.style-flyout__surprise {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px 24px 24px;
+  gap: 10px;
+}
+
+.style-flyout__surprise-icon {
+  margin-bottom: 4px;
+}
+
+.style-flyout__surprise-title {
+  margin: 0;
+  font-family: var(--font-use, 'SF Pro');
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: -0.2px;
+  color: var(--text-primary, #0d0d0d);
+}
+
+.style-flyout__surprise-body {
+  margin: 0;
+  font-family: var(--font-use, 'SF Pro');
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: -0.08px;
+  color: var(--text-secondary, #5d5d5d);
+  max-width: 280px;
+}
+
+.style-flyout__surprise-link {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: var(--font-use, 'SF Pro');
+  font-size: 14px;
+  font-weight: 510;
+  line-height: 20px;
+  color: var(--action-primary, #8b3dff);
+  padding: 2px 0;
+  margin-top: 2px;
+}
+
+.style-flyout__surprise-link:hover {
+  opacity: 0.8;
+}
+
+/* ─── Style picker modal (Change selection) ──────────────────────────────── */
+.style-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 15, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 24px;
+}
+
+.style-picker {
+  width: min(720px, 100%);
+  max-height: min(640px, 90vh);
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.style-picker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(13, 13, 13, 0.06);
+}
+
+.style-picker__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0d0d0d;
+  letter-spacing: -0.2px;
+}
+
+.style-picker__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #5d5d5d;
+  cursor: pointer;
+}
+
+.style-picker__close:hover {
+  background: rgba(13, 13, 13, 0.05);
+  color: #0d0d0d;
+}
+
+.style-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+  padding: 18px 20px 22px;
+  overflow-y: auto;
+}
+
+.style-picker__card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid rgba(13, 13, 13, 0.08);
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.style-picker__card:hover {
+  border-color: rgba(139, 61, 255, 0.45);
+  background: #faf7ff;
+}
+
+.style-picker__card--selected {
+  border-color: #8b3dff;
+  box-shadow: 0 0 0 1px #8b3dff;
+}
+
+.style-picker__thumb-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f3eeff;
+}
+
+.style-picker__thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.style-picker__check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.style-picker__name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 510;
+  color: #0d0d0d;
+  letter-spacing: -0.18px;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.style-picker__type {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+  color: #6c6c6c;
+  letter-spacing: -0.12px;
+  line-height: 16px;
+}
+
+/* ─── Review outline overlay — Figma node 2274:27976 ─────────────────────── */
+/* Leaves the 52px sidebar visible to match Figma 2274:27977 layout. */
+.review-outline-fullscreen {
+  left: 52px;
+  background: #f5f5f5;
+}
+
+@media (max-width: 768px) {
+  .review-outline-fullscreen {
+    left: 0;
+  }
+}
+
+/* Header — Figma 2274:27978. Right-side actions are opacity-0 in the design,
+   so we only render the close button on the left. */
+.review-outline-header-bar {
+  height: 52px;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid rgba(13, 13, 13, 0.05);
+}
+
+/* Sticky title block above the scrollable cards. Figma 2274:28136 / 28137. */
+.review-outline-title-block {
+  flex-shrink: 0;
+  background: #f5f5f5;
+  padding: 32px 16px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.review-outline-title {
+  margin: 0;
+  font-family: "SF Pro", "Canva Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 18px;
+  letter-spacing: -0.08px;
+  color: #000;
+}
+
+.review-outline-subtitle {
+  margin: 0;
+  max-width: 574px;
+  font-family: "SF Pro", "Canva Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: -0.08px;
+  color: #000;
+}
+
+/* Scrollable middle section — sits between the sticky title and the
+   absolutely-positioned footer composer. The 140px bottom padding keeps the
+   last card from getting pinned under the gradient + composer band. */
+.review-outline-fullscreen .preview-main.review-outline-main {
+  display: block;
+  align-items: stretch;
+  justify-content: flex-start;
+  background: #f5f5f5;
+  padding: 12px 16px 140px;
+  overflow-y: auto;
+}
+
+/* Cards container — Figma 2274:27997. Centered, 658px wide, 12px gap. */
+.review-outline-fullscreen .outline-cards {
+  max-width: 658px;
+  margin: 0 auto;
+}
+
+.review-outline-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 48px 16px;
+  color: #5d5d5d;
+  font-size: 14px;
+}
+
+.review-outline-empty {
+  text-align: center;
+  padding: 48px 16px;
+  color: #5d5d5d;
+  font-size: 14px;
+}
+
+/* Composer footer — Figma 2274:28101 (31px gradient strip) +
+   Figma 2274:28102 (96px solid #f5f5f5 strip). Cards scroll behind the
+   gradient, then behind the solid strip, and finally behind the composer. */
+.review-outline-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 127px;
+  padding: 0 16px 21px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to top,
+      #f5f5f5 0%,
+      #f5f5f5 75.6%,
+      rgba(245, 245, 245, 0) 100%
+    );
+}
+
+.review-outline-footer > * {
+  pointer-events: auto;
+}
+
+.review-outline-composer {
+  width: 100%;
+  max-width: 658px;
+  height: 52px;
+  padding: 8px 10px;
+  gap: 12px;
+  border: 0.5px solid rgba(0, 0, 0, 0.07);
+  border-radius: 28px;
+  box-shadow:
+    0 6px 16px -4px rgba(0, 0, 0, 0.08),
+    0 0.5px 1px 0 rgba(0, 0, 0, 0.04),
+    0 3px 6px -3px rgba(0, 0, 0, 0.05);
+}
+
+.review-outline-composer .preview-composer-input {
+  font-size: 16px;
+  letter-spacing: -0.32px;
+  color: #0d0d0d;
+}
+
+.review-outline-composer .preview-composer-input::placeholder {
+  color: #8b8b8b;
+}
+
+/* Dark filled send button — matches Figma 50:3831 (interactive/bg/primary). */
+.review-outline-send-btn {
+  width: 36px;
+  height: 36px;
+  background: #0d0d0d;
+  border-radius: 999px;
+  padding: 4px;
+}
+
+.review-outline-send-btn img {
+  filter: invert(1);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   StyleSelectionWidget — Variant B (?variant=b) drill menu
+
+   The kit-pill dropdown is the only switcher. It opens a "drill menu" — same
+   panel, two panes:
+     • list pane: All Brand Templates first, then kits, divider, Recent
+       designs, Surprise me. Each row that drills has a chevron-right.
+     • drill pane: back arrow + horizontal carousel of templates / designs.
+
+   The panel keeps a fixed width across both panes so the transition feels
+   continuous (Carrie: "the two switchers feel disconnected"). No
+   "Change reference" button, no separate flyout in variant B.
+
+   Modifier classes layered on top of variant A's .brand-kit-menu so most
+   visual properties (border, shadow, background) inherit; variant B adds
+   only what's different.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* Variant B drill menu sits as a "card" on top of the preview image with
+   identical dimensions (same width, same height, same border-radius, same
+   shadow). To pull this off we anchor it to the kit-row (which spans the
+   widget's full content width — i.e. the preview's width) instead of the
+   pill wrap (which is only as wide as the pill itself). */
+.style-selection-widget__brand-kit-wrap--drill-open {
+  /* Drop the wrap out of the positioned-ancestor chain when the drill is
+     open. The menu's position:absolute then anchors to the kit-row, which
+     already has position:relative and the desired width. */
+  position: static;
+}
+
+.brand-kit-menu--drill {
+  /* Reset the variant-A defaults so the overlay can take the preview's
+     dimensions. */
+  min-width: 0;
+  max-width: none;
+  /* Same footprint as .style-selection-widget__preview ↓ */
+  width: 100%;
+  aspect-ratio: 495 / 281;
+  height: auto;
+  /* The kit-row has margin-bottom: 4px, so the preview's top is exactly
+     4px below the kit-row's bottom. Land the overlay there. */
+  top: calc(100% + 4px);
+  left: 0;
+  /* Same rounding + shadow as the preview, so the surface reads as the
+     same kind of object — just temporarily wearing different content. */
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 0.554px rgba(64, 79, 109, 0.06),
+    0 2.217px 4.434px 0 rgba(24, 44, 89, 0.14),
+    0 6.651px 13.301px 0 rgba(24, 44, 89, 0.07);
+  /* Crisp edges; the inner content doesn't need to overflow the rounded
+     corners. */
+  overflow: hidden;
+  padding: 8px;
+  /* Sit above the preview (preview is position:relative, z-index:auto). */
+  z-index: 50;
+}
+
+.brand-kit-menu__item--drill {
+  /* Tightened vertical padding so 6 rows + divider fit inside the overlay's
+     281-px-tall footprint without overflow. */
+  padding: 7px 12px;
+  padding-right: 10px;
+  gap: 12px;
+}
+
+/* Shrink the brand-kit logo when it lives inside the drill overlay — the
+   variant-A 40-px square is too tall once the menu is height-constrained. */
+.brand-kit-menu--drill .brand-kit-menu__logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+.brand-kit-menu__item--drill .brand-kit-menu__label {
+  flex: 1;
+  text-align: left;
+  font-size: 13px;
+  letter-spacing: -0.05px;
+}
+
+.brand-kit-menu__chev {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  flex: 0 0 16px;
+  opacity: 0.85;
+}
+
+.brand-kit-menu__item--drill:hover .brand-kit-menu__chev {
+  opacity: 1;
+}
+
+.brand-kit-menu__divider {
+  height: 1px;
+  background: #ebebeb;
+  margin: 4px 4px;
+}
+
+.brand-kit-menu__logo--icon {
+  /* When the row icon is an inline SVG (Recent / Surprise) rather than a
+     square brand logo, give it the same footprint as the kit logos so the
+     left edge stays aligned. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #f7f7f8;
+  color: #0d0d0d;
+}
+
+.brand-kit-menu__logo--icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.brand-kit-menu__item--terminal {
+  /* Surprise me — direct action, no chevron, so reserve no right gutter. */
+}
+
+/* ─── Drill pane (kit BTs or recent designs) ─── */
+
+.brand-kit-menu--drill-pane {
+  /* Slightly more vertical room than the list pane for the carousel. */
+  padding: 6px 6px 10px;
+}
+
+.brand-kit-menu-drill__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 4px 8px;
+  border-bottom: 1px solid #ebebeb;
+  margin-bottom: 8px;
+}
+
+.brand-kit-menu-drill__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  color: #0d0d0d;
+  padding: 0;
+}
+
+.brand-kit-menu-drill__back:hover {
+  background: #f1f1f3;
+}
+
+.brand-kit-menu-drill__back:focus-visible {
+  outline: 2px solid #8b3dff;
+  outline-offset: 2px;
+}
+
+.brand-kit-menu-drill__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-use, "SF Pro");
+  font-size: 13px;
+  font-weight: 510;
+  color: #0d0d0d;
+  letter-spacing: -0.07px;
+}
+
+.brand-kit-menu-drill__title-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: #f7f7f8;
+  overflow: hidden;
+}
+
+.brand-kit-menu-drill__title-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Same All-BT treatment as the list row — center the 24×24 PNG inside the
+   22-px title chip on a soft grey backdrop. */
+.brand-kit-menu-drill__title-logo--bg {
+  background: #f3f3f3;
+}
+
+.brand-kit-menu-drill__title-logo--bg img {
+  width: 68%;
+  height: 68%;
+  object-fit: contain;
+}
+
+.brand-kit-menu-drill__title-logo--icon {
+  color: #0d0d0d;
+}
+
+.brand-kit-menu-drill__title-logo--icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.brand-kit-menu-drill__cards {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* The drill overlay is height-constrained (aspect-ratio: 495/281). The
+     header takes ~46px and the menu padding 16px (8 top + 8 bottom), so the
+     cards have ~219px of vertical room. Pin the row height so the cards use
+     that space cleanly instead of getting cropped. */
+  height: calc(100% - 54px);
+  padding: 2px 2px 6px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: #c8c8cd transparent;
+}
+
+.brand-kit-menu-drill__cards::-webkit-scrollbar { height: 6px; }
+.brand-kit-menu-drill__cards::-webkit-scrollbar-thumb {
+  background: #c8c8cd;
+  border-radius: 999px;
+}
+
+.brand-kit-menu-drill__card {
+  /* Larger card width now that the overlay matches the preview's width
+     (~495px) — 3 cards + gap = 3 * 148 + 20 = ~464px visible. */
+  flex: 0 0 148px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  scroll-snap-align: start;
+}
+
+.brand-kit-menu-drill__thumb {
+  position: relative;
+  width: 148px;
+  /* Thumb fills the available vertical space above the name/type lines. */
+  height: 156px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f1f1f3;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.brand-kit-menu-drill__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.brand-kit-menu-drill__thumb-empty {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f1f1f3 0%, #e3e3e8 100%);
+}
+
+.brand-kit-menu-drill__card:hover .brand-kit-menu-drill__thumb {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 13, 13, 0.08);
+}
+
+.brand-kit-menu-drill__card--selected .brand-kit-menu-drill__thumb {
+  outline: 2px solid #8b3dff;
+  outline-offset: 1px;
+}
+
+.brand-kit-menu-drill__check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.brand-kit-menu-drill__name {
+  font-family: var(--font-use, "SF Pro");
+  font-size: 12px;
+  font-weight: 510;
+  letter-spacing: -0.04px;
+  color: #0d0d0d;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 148px;
+}
+
+.brand-kit-menu-drill__type {
+  font-family: var(--font-use, "SF Pro");
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: -0.04px;
+  color: #8c8e92;
+  margin: 0;
+}
+
+.brand-kit-menu-drill__empty {
+  font-family: var(--font-use, "SF Pro");
+  font-size: 12px;
+  color: #8c8e92;
+  margin: 16px 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-kit-menu-drill__card:hover .brand-kit-menu-drill__thumb {
+    transform: none;
+    box-shadow: none;
+  }
 }

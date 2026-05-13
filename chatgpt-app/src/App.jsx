@@ -2,8 +2,125 @@ import { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react'
 import './App.css'
 import HomeView from './components/HomeView.jsx'
 import CanvaWidgetPlaceholder from './components/CanvaWidgetPlaceholder.jsx'
+import StyleSelectionWidget from './components/StyleSelectionWidget.jsx'
 import { CHATGPT_APP_SHELL_NAME } from './shellConfig.js'
 import { getAssistantResponseFromPrompt } from './mockAssistantReply.js'
+import { fetchAssistantResponseFromPrompt } from './assistantClient.js'
+
+/**
+ * Brand-refresh v2 experiment (reversible).
+ *
+ * Set to `false` to fully revert to the original "Unlinked Brand Templates" +
+ * refresh-icon "Change reference" behavior. All gated changes read this flag —
+ * no other code path is touched, so flipping it back is a one-line rollback.
+ *
+ * What it enables when `true`:
+ *  - The `'none'` brand kit is labeled "All Brand Templates" instead of
+ *    "Unlinked Brand Templates", and selecting it surfaces every brand
+ *    template in the team (linked + unlinked) in one carousel.
+ *  - The "Change reference" button uses a sliders/more-options icon instead
+ *    of the refresh icon, which several reviewers were reading as "shuffle".
+ */
+const BRAND_REFRESH_V2 = true
+
+/**
+ * Brand-switcher A/B variant resolver.
+ *
+ * Reads `?variant=a|b` from the URL once at boot. Both variants live in the
+ * same build so testers can compare them by swapping a single query param;
+ * everything else in the app (loading state, chat shell, final design,
+ * generation animation) is identical across variants.
+ *
+ *  - 'a' (control)  : current production-ish flow — main brand-kit pill +
+ *                     "Change reference" flyout with Apply Brand / Use recent /
+ *                     Surprise me tabs. Two switchers (main + flyout-internal).
+ *  - 'b' (treatment): single field-label brand-kit selector; clicking it opens
+ *                     a unified kit + brand-template picker. "Use a recent
+ *                     design" and "Surprise me" become inline alternatives.
+ *                     No "Change reference" button (Tali / Rach feedback).
+ *                     Addresses Carrie (disconnected switchers), Rach (field-
+ *                     label pattern), Emma (BT discoverability inside switcher).
+ *
+ * Default is 'a' so opening the bare URL keeps the control variant.
+ */
+/**
+ * Resolve the active brand variant.
+ *
+ * Resolution order:
+ *   1. Build-time `VITE_BRAND_VARIANT` env var (bakes the variant into a
+ *      deployment so a shared link doesn't need ?variant=, and end users
+ *      can't flip variants by editing the URL). Set with:
+ *        VITE_BRAND_VARIANT=b npm run build:all
+ *   2. Runtime `?variant=a|b` query string (used in local dev).
+ *   3. Default to 'a' (control).
+ */
+function resolveBrandVariant() {
+  const envV = (import.meta.env.VITE_BRAND_VARIANT || '').toLowerCase()
+  if (envV === 'a' || envV === 'b') return envV
+  if (typeof window === 'undefined') return 'a'
+  try {
+    const v = new URLSearchParams(window.location.search).get('variant')
+    return (v || '').toLowerCase() === 'b' ? 'b' : 'a'
+  } catch {
+    return 'a'
+  }
+}
+const BRAND_VARIANT = resolveBrandVariant()
+
+/**
+ * Variant B-only: swap the "Design Experience" brand kit slot for an
+ * "OpenAI" kit, and default the user into it with the OpenAI GKO deck
+ * pre-selected as the brand template. Lets testers see the picker land
+ * on a realistic state instead of an empty Canva default.
+ *
+ * Variant A is untouched — the Design Experience kit + Canva default
+ * still render exactly as before.
+ *
+ * The thumb paths reuse the existing slide PNGs in /public; only the
+ * names + kit attribution change. The first item (GKO) is intentionally
+ * the one we pre-select.
+ */
+const OPENAI_BRAND_KIT = {
+  id: 'openai',
+  name: 'OpenAI',
+  logo: '/brand-kits/openai.svg',
+}
+const OPENAI_TEMPLATE_THUMBS = [
+  '/1_11-469a37db-93e8-4db4-b2d4-80a3f42cbc2d.png',
+  '/2_27-8faad275-6d33-4458-8a13-03095e59b2a5.png',
+  '/3_11-f9537c15-0d69-4c0b-9813-b003d87375a4.png',
+  '/4_11-7dd24973-69bd-46a5-9e32-4090069af5e4.png',
+  '/5_2-6c6967d6-dc40-42f3-94ba-e090d041eb7a.png',
+  '/6_2-bf271a23-8671-4194-b699-1bd22e1224fe.png',
+]
+const OPENAI_TEMPLATES = OPENAI_TEMPLATE_THUMBS.map((thumb, i) => ({
+  id: `oai-${i + 1}`,
+  name: [
+    'OpenAI GKO',
+    'OpenAI Quarterly Review',
+    'OpenAI Research Update',
+    'OpenAI Product Launch',
+    'OpenAI All-Hands',
+    'OpenAI Investor Brief',
+  ][i],
+  type: 'Brand template',
+  thumb,
+  pages: Array.from({ length: 12 }, (_, p) => ({
+    id: p + 1,
+    label: `Page ${p + 1}`,
+    thumb: OPENAI_TEMPLATE_THUMBS[p % OPENAI_TEMPLATE_THUMBS.length],
+  })),
+}))
+/** Kit list passed to StyleSelectionWidget when variant B is active.
+ *  Same shape as the widget's DEFAULT_BRAND_KITS but with 'design-experience'
+ *  replaced by 'openai'. Variant A passes no override so DEFAULT_BRAND_KITS
+ *  (with DX) keeps rendering unchanged. */
+const BRAND_KITS_VARIANT_B = [
+  { id: 'canva', name: 'Canva Brand Kit', logo: '/brand-kits/canva.svg' },
+  OPENAI_BRAND_KIT,
+  { id: 'affinity', name: 'Affinity', logo: '/brand-kits/affinity.svg' },
+  { id: 'none', name: 'Unlinked Brand Templates', logo: '/brand-kits/none.svg' },
+]
 
 function App() {
   const [prompt, setPrompt] = useState('')
@@ -14,12 +131,34 @@ function App() {
   const [homeEntryPrompt, setHomeEntryPrompt] = useState('')
   /** First assistant turn after home submit — content matches prompt intent (outline vs other). */
   const [homeAssistantReply, setHomeAssistantReply] = useState(null)
+  const [assistantFirstTurnLoading, setAssistantFirstTurnLoading] = useState(false)
   const [screen, setScreen] = useState('home') // 'home' | 'next' - ready for next screen
   const [flowStep, setFlowStep] = useState('outline') // 'outline' | 'options' | 'create-from-existing'
-  const [widgetStep, setWidgetStep] = useState('options') // 'options' | 'create-from-existing' | 'generate-from-scratch' | 'generating' | 'remix' | 'brand-autofill'
+  const [widgetStep, setWidgetStep] = useState('options') // 'options' | 'create-from-existing' | 'generate-from-scratch' | 'generating' | 'remix' | 'brand-autofill' | 'style-selection'
+  /** Brand template chosen as the design style for the Canva style-selection widget.
+   *  Variant B boots with the OpenAI GKO deck pre-committed so testers see the
+   *  widget land on a populated, realistic state. Variant A keeps the original
+   *  empty default. */
+  const [selectedStyleTemplate, setSelectedStyleTemplate] = useState(
+    BRAND_VARIANT === 'b' ? OPENAI_TEMPLATES[0] : null
+  )
+  const [selectedBrandKitId, setSelectedBrandKitId] = useState(
+    BRAND_VARIANT === 'b' ? 'openai' : 'canva'
+  )
+  const [reviewOutlineOpen, setReviewOutlineOpen] = useState(false)
   const [loadedSlideCount, setLoadedSlideCount] = useState(0) // slides loaded in generating view
   const [mainPreviewUnblurred, setMainPreviewUnblurred] = useState(false)
   const [visiblePageSlotsCount, setVisiblePageSlotsCount] = useState(0) // page slots shown below (loading states)
+  const [generatingPhaseIndex, setGeneratingPhaseIndex] = useState(0) // 0..3 — rotates the live status copy line
+  /**
+   * Visual stage of the generating widget (Figma 3358:51230 → 51980).
+   *  0 = hero only (milestone 1)
+   *  1 = + inner design frame (milestone 2)
+   *  2 = + text-line skeletons (milestone 3)
+   *  3 = + image rectangle (milestone 4)
+   *  4 = end state — real hero + Open in Canva + real slide thumbs
+   */
+  const [generatingStage, setGeneratingStage] = useState(0)
   const [preSelectedDesign, setPreSelectedDesign] = useState(null) // legacy / outline navigation
   const [createExistingItem, setCreateExistingItem] = useState(null) // selected template or design in create-from-existing flow
   /** 'preserve' | 'condense' — how to treat source content when generating from an existing design */
@@ -130,6 +269,81 @@ Clear recommendations and what you need from the audience. Make the ask specific
     { id: 4, name: 'Corporate Identity', type: 'Brand template', thumb: slideThumbs[3], pages: createPages() },
     { id: 5, name: 'Creative Agency Template', type: 'Brand template', thumb: slideThumbs[4], pages: createPages() },
   ]
+
+  // Per-kit brand template lists. Each kit has its own distinct first template so
+  // switching brand kits on the main widget visibly changes the auto-selected template.
+  // Legacy: the 'none' (Unlinked Brand Templates) kit only reused the brandTemplates list.
+  // v2 (BRAND_REFRESH_V2): the 'none' slot becomes "All Brand Templates" and returns
+  // every BT across every BK in one carousel — matching product terminology Emma + Tali
+  // confirmed ("All Brand Templates" = all BTs across all BKs, linked or not).
+  const canvaBrandKitTemplates = [
+    { id: 'cbk-1', name: 'Design Summit Poster', type: 'Brand template', thumb: '/canva-templates/canva-brand-kit/01_poster_a4_design_summit.png', pages: createPages() },
+    { id: 'cbk-2', name: 'Brand Kits Poster', type: 'Brand template', thumb: '/canva-templates/canva-brand-kit/02_poster_a4_brand_kits.png', pages: createPages() },
+    { id: 'cbk-3', name: 'Create Event Flyer', type: 'Brand template', thumb: '/canva-templates/canva-brand-kit/03_flyer_create_event.png', pages: createPages() },
+    { id: 'cbk-4', name: 'Team Workshop Flyer', type: 'Brand template', thumb: '/canva-templates/canva-brand-kit/04_flyer_team_workshop.png', pages: createPages() },
+    { id: 'cbk-5', name: 'Homepage Hero Banner', type: 'Brand template', thumb: '/canva-templates/canva-brand-kit/05_banner_homepage_hero.png', pages: createPages() },
+    { id: 'cbk-6', name: 'Campaign Launch Banner', type: 'Brand template', thumb: '/canva-templates/canva-brand-kit/06_banner_campaign_launch.png', pages: createPages() },
+    { id: 'cbk-7', name: 'Newsletter Email Header', type: 'Brand template', thumb: '/canva-templates/canva-brand-kit/07_email_header_newsletter.png', pages: createPages() },
+    { id: 'cbk-8', name: 'Product Update Email', type: 'Brand template', thumb: '/canva-templates/canva-brand-kit/08_email_header_product_update.png', pages: createPages() },
+    { id: 'cbk-9', name: 'Intro Slide', type: 'Brand template', thumb: '/canva-templates/canva-brand-kit/09_slide_169_intro.png', pages: createPages() },
+    { id: 'cbk-10', name: 'Chapter Slide', type: 'Brand template', thumb: '/canva-templates/canva-brand-kit/10_slide_169_chapter.png', pages: createPages() },
+  ]
+
+  const designExperienceTemplates = [
+    { id: 'dx-1', name: 'DX Principles Poster', type: 'Brand template', thumb: '/canva-templates/design-experience/01_poster_a4_dx_principles.png', pages: createPages() },
+    { id: 'dx-2', name: 'Research Week Poster', type: 'Brand template', thumb: '/canva-templates/design-experience/02_poster_a4_research_week.png', pages: createPages() },
+    { id: 'dx-3', name: 'Pattern Library Flyer', type: 'Brand template', thumb: '/canva-templates/design-experience/03_flyer_pattern_library.png', pages: createPages() },
+    { id: 'dx-4', name: 'Critique Invite Flyer', type: 'Brand template', thumb: '/canva-templates/design-experience/04_flyer_critique_invite.png', pages: createPages() },
+    { id: 'dx-5', name: 'DX Hero Banner', type: 'Brand template', thumb: '/canva-templates/design-experience/05_banner_dx_hero.png', pages: createPages() },
+    { id: 'dx-6', name: 'Hiring Banner', type: 'Brand template', thumb: '/canva-templates/design-experience/06_banner_hiring.png', pages: createPages() },
+    { id: 'dx-7', name: 'DX Digest Email', type: 'Brand template', thumb: '/canva-templates/design-experience/07_email_header_dx_digest.png', pages: createPages() },
+    { id: 'dx-8', name: 'Offsite Email', type: 'Brand template', thumb: '/canva-templates/design-experience/08_email_header_offsite.png', pages: createPages() },
+    { id: 'dx-9', name: 'DX Intro Slide', type: 'Brand template', thumb: '/canva-templates/design-experience/09_slide_169_dx_intro.png', pages: createPages() },
+    { id: 'dx-10', name: 'DX Chapter Slide', type: 'Brand template', thumb: '/canva-templates/design-experience/10_slide_169_dx_chapter.png', pages: createPages() },
+  ]
+
+  const affinityTemplates = [
+    { id: 'af-1', name: 'Affinity Poster', type: 'Brand template', thumb: '/canva-templates/affinity/01_poster_a4_affinity_v3.png', pages: createPages() },
+    { id: 'af-2', name: 'Studio Event Poster', type: 'Brand template', thumb: '/canva-templates/affinity/02_poster_a4_studio_event.png', pages: createPages() },
+    { id: 'af-3', name: 'Designer Launch Flyer', type: 'Brand template', thumb: '/canva-templates/affinity/03_flyer_designer_launch.png', pages: createPages() },
+    { id: 'af-4', name: 'Publisher Flyer', type: 'Brand template', thumb: '/canva-templates/affinity/04_flyer_publisher.png', pages: createPages() },
+    { id: 'af-5', name: 'Affinity Hero Banner', type: 'Brand template', thumb: '/canva-templates/affinity/05_banner_affinity_hero.png', pages: createPages() },
+    { id: 'af-6', name: 'Education Banner', type: 'Brand template', thumb: '/canva-templates/affinity/06_banner_education.png', pages: createPages() },
+    { id: 'af-7', name: 'Release Notes Email', type: 'Brand template', thumb: '/canva-templates/affinity/07_email_header_release_notes.png', pages: createPages() },
+    { id: 'af-8', name: 'Community Email', type: 'Brand template', thumb: '/canva-templates/affinity/08_email_header_community.png', pages: createPages() },
+    { id: 'af-9', name: 'Keynote Slide', type: 'Brand template', thumb: '/canva-templates/affinity/09_slide_169_keynote.png', pages: createPages() },
+    { id: 'af-10', name: 'Workflow Slide', type: 'Brand template', thumb: '/canva-templates/affinity/10_slide_169_workflow.png', pages: createPages() },
+  ]
+
+  const getTemplatesForKit = (kitId) => {
+    switch (kitId) {
+      case 'canva':
+        return canvaBrandKitTemplates
+      case 'design-experience':
+        return designExperienceTemplates
+      case 'openai':
+        // Variant B-only kit; safe to expose regardless because variant A's
+        // kit list doesn't surface this id, so it can never be requested there.
+        return OPENAI_TEMPLATES
+      case 'affinity':
+        return affinityTemplates
+      case 'none':
+      default:
+        // v2: "All Brand Templates" — every BT across every BK + the unlinked ones.
+        // Ordering puts the previously-unlinked templates first so users still see
+        // them prominently, then the kit-scoped templates after. Variant B swaps
+        // Design Experience for OpenAI in the merged list to match the kit list.
+        return BRAND_REFRESH_V2
+          ? [
+              ...brandTemplates,
+              ...canvaBrandKitTemplates,
+              ...(BRAND_VARIANT === 'b' ? OPENAI_TEMPLATES : designExperienceTemplates),
+              ...affinityTemplates,
+            ]
+          : brandTemplates
+    }
+  }
+  const styleSelectionTemplates = getTemplatesForKit(selectedBrandKitId)
 
   const yourDesigns = [
     { id: 1, name: 'Q4 Pitch Deck', type: 'Presentation', thumb: slideThumbs[0], pages: createPages() },
@@ -331,6 +545,7 @@ Clear recommendations and what you need from the audience. Make the ask specific
     else if (tail.variant === 'generating') setWidgetStep('generating')
     else if (tail.variant === 'remix') setWidgetStep('remix')
     else if (tail.variant === 'brand-autofill') setWidgetStep('brand-autofill')
+    else if (tail.variant === 'style-selection') setWidgetStep('style-selection')
   }, [canvaThread])
 
   useEffect(() => {
@@ -386,12 +601,7 @@ Clear recommendations and what you need from the audience. Make the ask specific
         }
       }, { clearRemix: false })
     } else {
-      setPreSelectedDesign(null)
-      setFlowStep('options')
-      setCanvaThread([])
-      runAfterSecondaryLoad(() => {
-        setCanvaThread([{ id: newCanvaThreadId(), type: 'chooser' }])
-      })
+      triggerStyleSelectionWidget()
     }
   }
 
@@ -401,8 +611,26 @@ Clear recommendations and what you need from the audience. Make the ask specific
     if (!text) return
     setSubmittedPrompt(text)
     const result = processTemplateDesignPrompt(text)
-    navigateToTemplateDesign(text, result)
+    const mentionsCanva = /\bcanva\b/i.test(text)
+    if (result.foundDesign || result.explicitName || result.intentUserDesign) {
+      navigateToTemplateDesign(text, result)
+    } else if (mentionsCanva) {
+      triggerStyleSelectionWidget()
+    } else {
+      navigateToTemplateDesign(text, result)
+    }
     setOutlinePrompt('')
+  }
+
+  /** Trigger the style-selection widget; auto-select the first template of the current brand kit. */
+  const triggerStyleSelectionWidget = () => {
+    setPreSelectedDesign(null)
+    setFlowStep('options')
+    setCanvaThread([])
+    setSelectedStyleTemplate(getTemplatesForKit(selectedBrandKitId)[0] ?? null)
+    runAfterSecondaryLoad(() => {
+      setCanvaThread([{ id: newCanvaThreadId(), type: 'widget', variant: 'style-selection' }])
+    })
   }
 
   const handleHomeSubmit = (e) => {
@@ -410,26 +638,25 @@ Clear recommendations and what you need from the audience. Make the ask specific
     const text = capturePrompt.trim()
     if (!text) return
     setHomeEntryPrompt(text)
+    setSubmittedPrompt(text)
     const mentionsCanva = /\bcanva\b/i.test(text)
+
+    setHomeAssistantReply(null)
+    setAssistantFirstTurnLoading(true)
+    fetchAssistantResponseFromPrompt(text)
+      .then((reply) => setHomeAssistantReply(reply))
+      .finally(() => setAssistantFirstTurnLoading(false))
+
     if (mentionsCanva) {
-      setHomeAssistantReply(null)
-      setSubmittedPrompt(text)
-      setPreSelectedDesign(null)
-      setFlowStep('options')
-      setCanvaThread([])
-      runAfterSecondaryLoad(() => {
-        setCanvaThread([{ id: newCanvaThreadId(), type: 'chooser' }])
-      })
-    } else {
-      setHomeAssistantReply(getAssistantResponseFromPrompt(text))
+      triggerStyleSelectionWidget()
     }
     setShowHomeScreen(false)
   }
 
-  const assistantFirstTurn = useMemo(
-    () => homeAssistantReply ?? (homeEntryPrompt ? getAssistantResponseFromPrompt(homeEntryPrompt) : null),
-    [homeAssistantReply, homeEntryPrompt]
-  )
+  const assistantFirstTurn = useMemo(() => {
+    if (assistantFirstTurnLoading) return null
+    return homeAssistantReply ?? (homeEntryPrompt ? getAssistantResponseFromPrompt(homeEntryPrompt) : null)
+  }, [assistantFirstTurnLoading, homeAssistantReply, homeEntryPrompt])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -437,8 +664,11 @@ Clear recommendations and what you need from the audience. Make the ask specific
     if (!text) return
     setSubmittedPrompt(text)
     const result = processTemplateDesignPrompt(text)
+    const mentionsCanva = /\bcanva\b/i.test(text)
     if (result.foundDesign || result.explicitName || result.intentUserDesign) {
       navigateToTemplateDesign(text, result)
+    } else if (mentionsCanva) {
+      triggerStyleSelectionWidget()
     } else {
       setScreen('next')
     }
@@ -486,6 +716,7 @@ Clear recommendations and what you need from the audience. Make the ask specific
     setLoadedSlideCount(0)
     setMainPreviewUnblurred(false)
     setVisiblePageSlotsCount(0)
+    setGeneratingPhaseIndex(0)
     runAfterSecondaryLoad(() => {
       setCanvaThread((t) => [...t, { id: newCanvaThreadId(), type: 'widget', variant: 'generating' }])
     }, { clearRemix: false })
@@ -500,62 +731,104 @@ Clear recommendations and what you need from the audience. Make the ask specific
     })
   }
 
+  /**
+   * Open the bundled Canva editor app (built from `AI Presentation Canva Templates/`)
+   * in a new browser tab. The Canva app is emitted to `<dist>/canva-app/` and is
+   * resolved relative to the current Vite base URL so it works in both local dev
+   * (`/canva-app/`) and the GitHub Pages deploy (`/prompttodeck/canva-app/`).
+   */
+  const openCanvaApp = () => {
+    const base = (import.meta.env.BASE_URL ?? '/').replace(/\/?$/, '/')
+    // Use the explicit index.html path so Vite's dev server (which doesn't
+    // auto-serve `index.html` on bare directory requests in public/) finds the
+    // built Canva editor app at chatgpt-app/public/canva-app/. In production
+    // (static hosting) this URL also works because the file exists directly.
+    //
+    // `?from=chatgpt` activates the ChatGPT handoff UI inside the Canva
+    // editor: auto-opens the Canva AI side panel (DesignProgressList chat),
+    // swaps the bottom preview row for ChatGPTPreviewPanel (slide-by-slide
+    // loader), and uses the first stored page as the canvas page.
+    window.open(`${base}canva-app/index.html?from=chatgpt`, '_blank', 'noopener,noreferrer')
+  }
+
   const generatingPages = remixItem?.pages || createExistingItem?.pages || createPages()
 
+  // Generating widget animation — Figma nodes 3358:51230 → 3358:51980.
+  // ~60s total across 5 milestones (4 phase labels). Phase 0 ("Searching
+  // Canva templates") is covered by the secondary loading state that
+  // precedes this widget, so we start on phase 1.
+  //
+  //   t=0     m1  phase="Planning your story", hero mounts
+  //   t=2000      slot 1 enters
+  //   t=15000 m2  phase="Adding text and images", inner design frame appears
+  //   t=17000     slot 2 enters
+  //   t=27000 m3  phase="Finalizing design", text-line skeletons appear
+  //   t=29000     slot 3 enters
+  //   t=39000 m4  image rectangle appears in inner frame
+  //   t=41000     slot 4 enters
+  //   t=52000 end real hero + "Open in Canva" + slots swap to real thumbs
+  //   t=54000     slot 5 enters
   useEffect(() => {
     if (widgetStep !== 'generating') return
-    const totalSlides = generatingPages.length
-    const DELAY_PURPLE_GRADIENT = 3000 // white + purple gradient for a few seconds
-    const DELAY_AFTER_DESIGN_LOAD = 600 // brief pause before adding boxes
-    const DELAY_BETWEEN_PAGE_SLOTS = 400 // add purple gradient box below
-    const DELAY_BETWEEN_THUMBNAILS = 500 // load thumbnail into box
+    const totalSlides = Math.min(generatingPages.length, 5)
 
-    let elementTimer = null
-    let slotsIntervalId = null
-    let thumbsIntervalId = null
-    let slotsStartTimer = null
-    let thumbsStartTimer = null
+    setGeneratingPhaseIndex(1) // "Planning your story"
+    setGeneratingStage(0)
+    setLoadedSlideCount(0)
+    setMainPreviewUnblurred(false)
+    setVisiblePageSlotsCount(0)
 
-    // Phase 1: White + purple gradient for a few seconds, then load design on large thumbnail
-    const phase1Timer = setTimeout(() => {
-      setLoadedSlideCount(1)
-      // Unblur the design
-      elementTimer = setTimeout(() => {
+    const timeline = [
+      // Milestone 1 — hero alone, then slot 1
+      { at: 2000, run: () => {
+        setVisiblePageSlotsCount((c) => Math.max(c, Math.min(1, totalSlides)))
+        setLoadedSlideCount((c) => Math.max(c, 1))
+      } },
+
+      // Milestone 2 — inner design frame appears, phase → "Adding text and images"
+      { at: 15000, run: () => {
+        setGeneratingPhaseIndex(2)
+        setGeneratingStage((s) => Math.max(s, 1))
+      } },
+      { at: 17000, run: () => {
+        setVisiblePageSlotsCount((c) => Math.max(c, Math.min(2, totalSlides)))
+        setLoadedSlideCount((c) => Math.max(c, 2))
+      } },
+
+      // Milestone 3 — text-line skeletons appear, phase → "Finalizing design"
+      { at: 27000, run: () => {
+        setGeneratingPhaseIndex(3)
+        setGeneratingStage((s) => Math.max(s, 2))
+      } },
+      { at: 29000, run: () => {
+        setVisiblePageSlotsCount((c) => Math.max(c, Math.min(3, totalSlides)))
+        setLoadedSlideCount((c) => Math.max(c, 3))
+      } },
+
+      // Milestone 4 — image rectangle slides in (phase unchanged)
+      { at: 39000, run: () => {
+        setGeneratingStage((s) => Math.max(s, 3))
+      } },
+      { at: 41000, run: () => {
+        setVisiblePageSlotsCount((c) => Math.max(c, Math.min(4, totalSlides)))
+        setLoadedSlideCount((c) => Math.max(c, 4))
+      } },
+
+      // End state — real hero + Open in Canva + real slide thumbnails
+      { at: 52000, run: () => {
+        setGeneratingStage(4)
         setMainPreviewUnblurred(true)
-      }, 400)
-      // Phase 2: Add purple gradient boxes below one by one
-      slotsStartTimer = setTimeout(() => {
-        setVisiblePageSlotsCount(1)
-        let slots = 1
-        slotsIntervalId = setInterval(() => {
-          slots += 1
-          setVisiblePageSlotsCount((c) => Math.min(c + 1, totalSlides))
-          if (slots >= totalSlides) {
-            if (slotsIntervalId) clearInterval(slotsIntervalId)
-          }
-        }, DELAY_BETWEEN_PAGE_SLOTS)
-      }, DELAY_AFTER_DESIGN_LOAD)
-      // Phase 3: Load thumbnails into boxes one by one
-      thumbsStartTimer = setTimeout(() => {
-        let loaded = 1
-        thumbsIntervalId = setInterval(() => {
-          loaded += 1
-          if (loaded > totalSlides + 1) {
-            if (thumbsIntervalId) clearInterval(thumbsIntervalId)
-            return
-          }
-          setLoadedSlideCount(loaded)
-        }, DELAY_BETWEEN_THUMBNAILS)
-      }, DELAY_AFTER_DESIGN_LOAD + DELAY_BETWEEN_THUMBNAILS)
-    }, DELAY_PURPLE_GRADIENT)
+      } },
+      { at: 54000, run: () => {
+        setVisiblePageSlotsCount((c) => Math.max(c, Math.min(5, totalSlides)))
+        setLoadedSlideCount((c) => Math.max(c, 5))
+      } },
+    ]
+
+    const timeouts = timeline.map(({ at, run }) => window.setTimeout(run, at))
 
     return () => {
-      clearTimeout(phase1Timer)
-      if (elementTimer) clearTimeout(elementTimer)
-      if (slotsStartTimer) clearTimeout(slotsStartTimer)
-      if (thumbsStartTimer) clearTimeout(thumbsStartTimer)
-      if (slotsIntervalId) clearInterval(slotsIntervalId)
-      if (thumbsIntervalId) clearInterval(thumbsIntervalId)
+      timeouts.forEach((t) => clearTimeout(t))
     }
   }, [widgetStep, generatingPages.length])
 
@@ -598,6 +871,15 @@ Clear recommendations and what you need from the audience. Make the ask specific
       document.removeEventListener('keydown', onKey)
     }
   }, [createExistingPickerOpen])
+
+  useEffect(() => {
+    if (!reviewOutlineOpen) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') setReviewOutlineOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [reviewOutlineOpen])
 
   const FollowUpActions = () => (
     <div className="chatgpt-follow-up-actions">
@@ -649,9 +931,11 @@ Clear recommendations and what you need from the audience. Make the ask specific
             ? 'Pick assets via your tool; Continue runs the next call.'
             : tailVariant === 'brand-autofill'
               ? 'Autofill UI maps to structuredContent from your MCP tool.'
-              : hasChooserInThread
-                ? chooserFollowUpText
-                : 'Earlier steps are above; continue below.'
+              : tailVariant === 'style-selection'
+                ? 'To generate your design, I have selected this Brand Template to match the style to. Select Change selection to choose a different template, or Generate design to continue.'
+                : hasChooserInThread
+                  ? chooserFollowUpText
+                  : 'Earlier steps are above; continue below.'
 
   const followUpForLiveWidget = () => 'Ask for changes in chat or use the action above.'
 
@@ -695,19 +979,204 @@ Clear recommendations and what you need from the audience. Make the ask specific
     const title = `Widget ${idx + 2}`
 
     if (w.variant === 'generating') {
+      // Figma 3358:51230 → 51980 — phase labels rotate across the ~60s timeline.
+      // Phase 0 ("Searching Canva templates") is shown by the secondary loading
+      // state above; this widget starts on phase 1.
+      const phaseLabels = [
+        'Searching Canva templates',
+        'Planning your story',
+        'Adding text and images',
+        'Finalizing design',
+      ]
+      const phaseTail = '. Generating designs can take up to 1 minute…'
+      // Cap slide ticker at 5 (max for this milestone per design spec).
+      const slotCount = Math.min(generatingPages.length, 5)
+      const hasMultiplePages = slotCount > 1
+      const isReady = mainPreviewUnblurred
+      // Variant B treatment: a single static "Live generation in progress" status
+      // line with a pulsing dot for the entire animation, plus the "Open in Canva"
+      // CTA visible from stage 0 (rather than only at the final stage). Keeps the
+      // control variant (A) pixel-identical.
+      const isVariantB = BRAND_VARIANT === 'b'
+      const showOpenCanvaBtn = isReady || isVariantB
+      // Skeleton bars inside the inner frame — widths echo Figma frame 3.
+      const skeletonBars = [
+        { w: '14%', delay: 0 },
+        { w: '44%', delay: 60 },
+        { w: '32%', delay: 120 },
+        { w: '36%', delay: 180 },
+        { w: '20%', delay: 240 },
+      ]
+      const handleOpenInCanva = () => {
+        if (past) return
+        openCanvaApp()
+        advanceFromGeneratingPlaceholder()
+      }
       return (
         <div className="canva-tool-thread-block">
           <div className="canva-widget-with-header">
             <div className="options-container">
-              <div className="generating-widget">
-                <CanvaWidgetPlaceholder
-                  layout="panel"
-                  title={title}
-                  subtitle="Long-running tool: show progress from structuredContent or poll your server."
-                  primaryLabel="Next step"
-                  primaryDisabled={dis}
-                  onPrimary={advanceFromGeneratingPlaceholder}
-                />
+              <div
+                className={`generating-widget${hasMultiplePages ? '' : ' generating-widget--single'}`}
+                data-past={past ? 'true' : undefined}
+                data-stage={generatingStage}
+              >
+                {/* Figma 3358:51394 — Prog copy (gradient phase + grey tail).
+                    At end state, swaps to a single static "Design Finalized." line
+                    that mirrors the phase typography but drops the gradient + shimmer.
+                    Variant B replaces the rotating phase copy with a single static
+                    "Live generation in Progress…" line + pulsing dot for the entire
+                    ~60s animation, then swaps to its own "Your design is ready…"
+                    end-state copy (Figma 3058:8284, NotificationDot 3058:8155). */}
+                <header className="generating-status-block">
+                  <p
+                    className="generating-status-line"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {isVariantB ? (
+                      isReady ? (
+                        <span className="generating-status-line__done">
+                          Your design is ready. Open it in Canva to edit and share.
+                        </span>
+                      ) : (
+                        <span className="generating-status-line__variant-b">
+                          <span
+                            className="generating-status-line__dot"
+                            aria-hidden="true"
+                          />
+                          <span className="generating-status-line__variant-b-text">
+                            Live generation in Progress. Open the design in Canva now to edit and share.
+                          </span>
+                        </span>
+                      )
+                    ) : isReady ? (
+                      <span className="generating-status-line__done">
+                        Design Finalized. Open in Canva now to edit and share
+                      </span>
+                    ) : (
+                      <>
+                        <span
+                          key={`phase-${generatingPhaseIndex}`}
+                          className="generating-status-line__phase"
+                        >
+                          {phaseLabels[generatingPhaseIndex]}
+                        </span>
+                        <span className="generating-status-line__tail">{phaseTail}</span>
+                      </>
+                    )}
+                  </p>
+                </header>
+
+                {/* Figma 3358:51292 → 51980 — Load visual progresses through
+                    pastel hero → inner frame → skeletons → image rect → real hero.
+                    Variant B adds a `--variant-b` modifier so the open-in-Canva
+                    CTA can render from stage 0 instead of waiting for is-ready. */}
+                <div
+                  className={`generating-preview-area${isReady ? ' is-ready' : ''}${isVariantB ? ' generating-preview-area--variant-b' : ''}`}
+                >
+                  <div className="generating-conic-gradient" aria-hidden="true" />
+                  <div className="generating-preview-veil" aria-hidden="true" />
+
+                  {/* Inner design canvas (m2+) */}
+                  <div
+                    className={`generating-inner-frame${generatingStage >= 1 ? ' is-visible' : ''}`}
+                    aria-hidden="true"
+                  >
+                    {/* Text-line skeletons (m3+) */}
+                    <div
+                      className={`generating-skeletons${generatingStage >= 2 ? ' is-visible' : ''}`}
+                      aria-hidden="true"
+                    >
+                      {skeletonBars.map((bar, i) => (
+                        <span
+                          key={i}
+                          className="generating-skeleton-bar"
+                          style={{
+                            width: bar.w,
+                            animationDelay: `${bar.delay}ms`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                    {/* Image rectangle (m4+) */}
+                    <div
+                      className={`generating-image-rect${generatingStage >= 3 ? ' is-visible' : ''}`}
+                      aria-hidden="true"
+                    />
+                  </div>
+
+                  {/* End state — real Deploy 2026 hero image */}
+                  {slotCount > 0 ? (
+                    <img
+                      src={generatingPages[0]?.thumb}
+                      alt=""
+                      className={`generating-final-hero${isReady ? ' is-visible' : ''}`}
+                      aria-hidden={!isReady}
+                    />
+                  ) : null}
+
+                  {/* End-state bottom darken — Figma 3358:51980 Rectangle 1591333638.
+                      linear-gradient(180deg, rgba(60,4,112,0) 0%, rgba(0,0,0,0.8) 100%).
+                      Only shown once the real hero is loaded so the loading
+                      pastel layers stay clean during the generation animation
+                      (applies to both variants). */}
+                  <div
+                    className={`generating-hero-bottom-fade${isReady ? ' is-visible' : ''}`}
+                    aria-hidden="true"
+                  />
+
+                  <div className="generating-preview-content">
+                    {showOpenCanvaBtn ? (
+                      <button
+                        type="button"
+                        className="generating-open-canva-btn"
+                        onClick={handleOpenInCanva}
+                        disabled={past}
+                      >
+                        <img
+                          src="/Canva_Icon_logo.png"
+                          alt=""
+                          width={20}
+                          height={20}
+                          className="generating-open-canva-btn__icon"
+                        />
+                        Open in Canva
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Figma 3358:51388 — slide ticker (max 5, enter 1-by-1, swap
+                    to real thumbnails at end state). */}
+                {hasMultiplePages ? (
+                  <div
+                    className="generating-slides-row"
+                    aria-label={`Generating ${slotCount} slides`}
+                  >
+                    {Array.from({ length: slotCount }).map((_, i) => {
+                      const visible = i < visiblePageSlotsCount
+                      const realThumb = generatingPages[i]?.thumb
+                      return (
+                        <div
+                          key={i}
+                          className={`generating-slide-slot${visible ? ' is-visible' : ''}${isReady ? ' is-ready' : ''}`}
+                          aria-hidden={!visible}
+                        >
+                          <div className="generating-slide-gradient" />
+                          {realThumb ? (
+                            <img
+                              src={realThumb}
+                              alt=""
+                              className="generating-slide-thumb"
+                              aria-hidden="true"
+                            />
+                          ) : null}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -772,6 +1241,35 @@ Clear recommendations and what you need from the audience. Make the ask specific
       return (
         <div className="canva-tool-thread-block">
           {renderCreateFromExistingInteractive(past, title)}
+        </div>
+      )
+    }
+    if (w.variant === 'style-selection') {
+      return (
+        <div className="canva-tool-thread-block">
+          <div className="canva-widget-with-header">
+            <StyleSelectionWidget
+              selected={selectedStyleTemplate}
+              templates={styleSelectionTemplates}
+              getTemplatesForKit={getTemplatesForKit}
+              recentDesigns={yourDesigns}
+              selectedBrandKitId={selectedBrandKitId}
+              brandRefreshV2={BRAND_REFRESH_V2}
+              brandVariant={BRAND_VARIANT}
+              // Variant B swaps the "Design Experience" kit for an "OpenAI" kit.
+              // Variant A leaves this undefined so the widget keeps using its
+              // DEFAULT_BRAND_KITS (with DX) — no behavioural change for A.
+              brandKits={BRAND_VARIANT === 'b' ? BRAND_KITS_VARIANT_B : undefined}
+              onSelectBrandKit={past || secondaryPanelLoading ? undefined : (kit) => {
+                setSelectedBrandKitId(kit.id)
+                setSelectedStyleTemplate(getTemplatesForKit(kit.id)[0] ?? null)
+              }}
+              onSelectTemplate={past || secondaryPanelLoading ? undefined : (tpl) => setSelectedStyleTemplate(tpl)}
+              onReviewOutline={past ? undefined : () => setReviewOutlineOpen(true)}
+              onGenerate={past || secondaryPanelLoading ? undefined : handleGenerateDesign}
+              disabled={dis}
+            />
+          </div>
         </div>
       )
     }
@@ -886,22 +1384,33 @@ Clear recommendations and what you need from the audience. Make the ask specific
                     </div>
                   </div>
                   <div className="app-content outline-response">
-                    {assistantFirstTurn ? (
+                    {assistantFirstTurnLoading ? (
+                      <div
+                        className="canva-secondary-loading-chat assistant-first-turn-loading"
+                        role="status"
+                        aria-live="polite"
+                        aria-label="Generating response"
+                      >
+                        <span className="chatgpt-loading-dot" aria-hidden />
+                        <span className="canva-secondary-loading-chat-message">Generating response…</span>
+                      </div>
+                    ) : assistantFirstTurn ? (
                       <div className="outline-container">
                         {assistantFirstTurn.mode === 'outline' && assistantFirstTurn.sections ? (
-                          <div className="outline-sections">
-                            {assistantFirstTurn.sections.map((sec) => (
-                              <section key={sec.num} className="outline-section">
-                                <h3 className="outline-section-title">
-                                  {sec.num}. {sec.title}
-                                </h3>
-                                <p className="outline-section-desc">{sec.desc}</p>
-                                <ul className="outline-section-points">
-                                  {sec.points.map((pt) => (
-                                    <li key={pt}>{pt}</li>
-                                  ))}
-                                </ul>
-                              </section>
+                          <div className="outline-cards">
+                            {assistantFirstTurn.sections.map((sec, idx) => (
+                              <article
+                                key={sec.num}
+                                className={`outline-card${idx === 0 ? ' outline-card--first' : ''}`}
+                              >
+                                <h3 className="outline-card-title">{sec.title}</h3>
+                                <p className="outline-card-desc">
+                                  {sec.desc}
+                                  {Array.isArray(sec.points) && sec.points.length > 0
+                                    ? ` ${sec.points.join('. ')}.`
+                                    : ''}
+                                </p>
+                              </article>
                             ))}
                           </div>
                         ) : null}
@@ -909,7 +1418,7 @@ Clear recommendations and what you need from the audience. Make the ask specific
                           <div className="assistant-prose-body">{assistantFirstTurn.prose}</div>
                         ) : null}
                         {assistantFirstTurn.mode === 'bullets' && assistantFirstTurn.bullets ? (
-                          <ul className="assistant-bullet-list outline-section-points">
+                          <ul className="assistant-bullet-list">
                             {assistantFirstTurn.bullets.map((item) => (
                               <li key={item}>{item}</li>
                             ))}
@@ -918,7 +1427,13 @@ Clear recommendations and what you need from the audience. Make the ask specific
                       </div>
                     ) : null}
                   </div>
-                  <ChatGptFollowUp text={assistantFirstTurn?.followUp ?? 'Ask anything below.'} />
+                  <ChatGptFollowUp
+                    text={
+                      assistantFirstTurnLoading
+                        ? 'One moment…'
+                        : assistantFirstTurn?.followUp ?? 'Ask anything below.'
+                    }
+                  />
                 </>
               )}
               {flowStep !== 'outline' && (submittedPrompt || remixItem) && (
@@ -992,16 +1507,24 @@ Clear recommendations and what you need from the audience. Make the ask specific
                   })}
                   {widgetEntries.map((w, idx) => {
                     const isLast = idx === widgetEntries.length - 1
+                    // Generating widget hides the trailing follow-up + icons
+                    // entirely while the design is still being created.
+                    // The block reappears at end state with a "design ready" message.
+                    const isGeneratingLive = w.variant === 'generating' && isLast
+                    const isGeneratingReady = isGeneratingLive && mainPreviewUnblurred
+                    const hideFollowUp = isGeneratingLive && !mainPreviewUnblurred
+
                     const postFollowUpText =
-                      w.variant === 'generating' && isLast && isGeneratingFromYourDesign ? (
+                      isGeneratingReady && isGeneratingFromYourDesign ? (
                         <p className="chatgpt-follow-up-text">
-                          Your design is being created. You can open it in Canva to watch it unfold. We’ve also converted{' '}
+                          I’ve generated your design from{' '}
                           <strong>{createExistingItem?.name}</strong>
-                          {' '}into a brand template for you.{' '}
-                          <a href="#" className="chatgpt-follow-up-inline-link" onClick={(e) => e.preventDefault()}>View in Canva →</a>
+                          {' '}— open it in Canva to edit and share. We’ve also saved a brand template for next time.
                         </p>
-                      ) : w.variant === 'generating' && isLast ? (
-                        <p className="chatgpt-follow-up-text">{canvaFollowUpHelperText}</p>
+                      ) : isGeneratingReady ? (
+                        <p className="chatgpt-follow-up-text">
+                          I’ve generated the design — open it in Canva to edit and share.
+                        </p>
                       ) : !isLast ? (
                         <p className="chatgpt-follow-up-text">{followUpForFrozenWidget()}</p>
                       ) : (
@@ -1021,10 +1544,12 @@ Clear recommendations and what you need from the audience. Make the ask specific
                     <span>Canva</span>
                   </div>
                   {renderWidgetInner(w, idx)}
-                  <div className="chatgpt-follow-up chatgpt-follow-up--post-widget">
-                    {postFollowUpText}
-                    <FollowUpActions />
-                  </div>
+                  {hideFollowUp ? null : (
+                    <div className="chatgpt-follow-up chatgpt-follow-up--post-widget">
+                      {postFollowUpText}
+                      <FollowUpActions />
+                    </div>
+                  )}
                   </div>
                     )
                   })}
@@ -1328,6 +1853,106 @@ Clear recommendations and what you need from the audience. Make the ask specific
               ))}
             </div>
           </main>
+        </div>
+      )}
+
+      {/* Review outline overlay — Figma node 2274:27976 (Sales use case > Review outline). */}
+      {reviewOutlineOpen && (
+        <div className="preview-fullscreen review-outline-fullscreen">
+          {/* Figma 2274:27978 — Header row, only the close button is visible (right side opacity-0 in Figma). */}
+          <header className="preview-header review-outline-header-bar">
+            <div className="preview-header-left">
+              <button
+                type="button"
+                className="preview-close-btn"
+                onClick={() => setReviewOutlineOpen(false)}
+                aria-label="Close"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+          </header>
+
+          {/* Figma 2274:28136 / 2274:28137 — Sticky title block above the scrollable cards. */}
+          <div className="review-outline-title-block">
+            <h1 className="review-outline-title">Review outline</h1>
+            <p className="review-outline-subtitle">
+              Review and edit the outline via the chat below. Ask Canva to make edits to the length, tone, or text via the chat.
+            </p>
+          </div>
+
+          <main className="preview-main review-outline-main">
+            {/* Figma 2274:27997 — Outline cards container, max-width 658px, gap 12px. */}
+            <div className="outline-cards">
+              {assistantFirstTurnLoading ? (
+                <div
+                  className="review-outline-loading"
+                  role="status"
+                  aria-live="polite"
+                  aria-label="Generating outline"
+                >
+                  <span className="chatgpt-loading-dot" aria-hidden />
+                  <span className="canva-secondary-loading-chat-message">Generating outline…</span>
+                </div>
+              ) : assistantFirstTurn?.mode === 'outline' && assistantFirstTurn.sections?.length ? (
+                assistantFirstTurn.sections.map((sec, idx) => (
+                  <article
+                    key={sec.num}
+                    className={`outline-card${idx === 0 ? ' outline-card--first' : ''}`}
+                  >
+                    <h3 className="outline-card-title">{sec.title}</h3>
+                    <p className="outline-card-desc">
+                      {sec.desc}
+                      {Array.isArray(sec.points) && sec.points.length > 0
+                        ? ` ${sec.points.join('. ')}.`
+                        : ''}
+                    </p>
+                  </article>
+                ))
+              ) : assistantFirstTurn?.mode === 'prose' && assistantFirstTurn.prose ? (
+                <article className="outline-card outline-card--first">
+                  <h3 className="outline-card-title">Response</h3>
+                  <p className="outline-card-desc">{assistantFirstTurn.prose}</p>
+                </article>
+              ) : assistantFirstTurn?.mode === 'bullets' && assistantFirstTurn.bullets?.length ? (
+                assistantFirstTurn.bullets.map((item, idx) => (
+                  <article
+                    key={idx}
+                    className={`outline-card${idx === 0 ? ' outline-card--first' : ''}`}
+                  >
+                    <p className="outline-card-desc">{item}</p>
+                  </article>
+                ))
+              ) : (
+                <div className="review-outline-empty">
+                  <p>No outline yet — submit a prompt to generate one.</p>
+                </div>
+              )}
+            </div>
+          </main>
+
+          {/* Figma 2274:28103 — Composer pinned to bottom of the chat pane. */}
+          <footer className="preview-footer review-outline-footer">
+            <div className="preview-composer review-outline-composer">
+              <button type="button" className="preview-composer-icon" aria-label="Add">
+                <img src="/svg/Icon.svg" alt="" width={20} height={20} />
+              </button>
+              <input
+                type="text"
+                className="preview-composer-input"
+                placeholder="Ask Canva"
+              />
+              <button type="button" className="preview-composer-icon" aria-label="Voice input">
+                <img src="/svg/_Composer-action/Icon.svg" alt="" width={20} height={20} />
+              </button>
+              <button type="button" className="preview-composer-send review-outline-send-btn" aria-label="Send">
+                <img src="/svg/_Composer-action/Send.svg" alt="" width={36} height={36} />
+              </button>
+            </div>
+          </footer>
         </div>
       )}
 

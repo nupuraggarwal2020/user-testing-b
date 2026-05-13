@@ -29,6 +29,10 @@ export default defineConfig({
     ],
   },
   build: {
+    // Emit into the shared root-level dist/ (alongside the chatgpt-app build)
+    // so the chatgpt-app's "Open in Canva" button can link to ./canva-app/.
+    outDir: '../dist/canva-app',
+    emptyOutDir: true,
     assetsInlineLimit: 1024 * 1024, // 1 Mb
     minify: false,
     sourcemap: false,

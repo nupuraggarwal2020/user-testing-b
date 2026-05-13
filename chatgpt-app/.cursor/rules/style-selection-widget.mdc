@@ -1,0 +1,40 @@
+---
+description: Rules for StyleSelectionWidget behaviour — selection state, flyout, brand kit dropdown. Apply whenever editing StyleSelectionWidget.jsx or the style-selection-widget / style-flyout CSS.
+globs:
+  - "src/components/StyleSelectionWidget.jsx"
+  - "src/App.css"
+---
+
+# StyleSelectionWidget Rules
+
+## Brand kit dropdown on main widget
+- Show the brand kit dropdown **only** when `selectionMode === 'brand-template'`.
+- For `recent-design` and `surprise-me` modes, the dropdown is **hidden**.
+  - Instead, put the "Change reference" button in the **same row as the "Visual reference" heading** (`.style-selection-widget__title-row` flex layout).
+
+## Brand kit dropdown inside the flyout
+- The "Apply Brand" tab in the flyout **does** contain a brand kit dropdown, so users can switch kits even when a recent design or Surprise me is the active selection on the main widget.
+- Switching the kit inside the flyout calls the same `handleSelectBrandKit` handler, which updates `selectedBrandKitId` in App.jsx and auto-selects the first template of the new kit.
+- The "Apply Brand" tab shows only the brand templates that belong to the currently selected brand kit (passed via the `templates` prop — already filtered in App.jsx).
+
+## No auto-selection of templates — CRITICAL
+- `selectedStyleTemplate` in App.jsx must NEVER be auto-set to a default template (e.g. `brandTemplates[0]`).
+- It starts as `null` and only becomes non-null when the user explicitly clicks a card in the flyout.
+- When switching brand kits, set `selectedStyleTemplate` to `null` (clear old selection), never auto-pick the first card of the new kit.
+- The main widget preview image uses a fallback (`selected ?? visibleTemplates[0]`) so it always shows something visually — but `selected` being null means no checkmark appears in the flyout.
+
+## Flyout selection state — CRITICAL
+- When the flyout opens, it **must** sync its active tab to `selectionMode`:
+  - `'brand-template'` → open on `'apply-brand'` tab
+  - `'recent-design'`  → open on `'use-recent'` tab
+  - `'surprise-me'`   → open on `'surprise-me'` tab
+- Inside the flyout, **only** the item that is currently selected on the **main widget** (`selected` prop) may have a checkmark. All other items must be unchecked.
+- The `isSelected` check for brand templates: `selectionMode === 'brand-template' && selected?.id === tpl.id`
+- The `isSelected` check for recent designs: `selectionMode === 'recent-design' && selected?.id === design.id`
+- Never use a fallback that marks items selected based on index or list position.
+- Never persist the last flyout tab across open/close cycles; always re-derive it from `selectionMode` on open.
+
+## Selecting an item from the flyout
+- Selecting a brand template sets `selectionMode = 'brand-template'` and closes the flyout.
+- Selecting a recent design sets `selectionMode = 'recent-design'` and closes the flyout.
+- Clicking "Got it!" in the Surprise me tab sets `selectionMode = 'surprise-me'` and closes the flyout.

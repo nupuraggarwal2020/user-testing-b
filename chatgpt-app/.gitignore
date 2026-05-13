@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+
+# Built Canva editor app (rebuild with: cd "AI Presentation Canva Templates" && npx vite build --outDir ../chatgpt-app/public/canva-app)
+public/canva-app/
 
 # Editor directories and files
 .vscode/*

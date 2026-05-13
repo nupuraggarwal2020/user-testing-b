@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "deploy": "GITHUB_PAGES=true npm run build && npx gh-pages -d ../dist",
-    "build:canva": "cd \"../AI Presentation Canva Templates\" && npm install && npx vite build && mkdir -p \"../chatgpt-app/public/canva-editor\" && cp -r dist/* \"../chatgpt-app/public/canva-editor/\"",
+    "build:canva": "cd \"../AI Presentation Canva Templates\" && npm install && npx vite build",
+    "build:all": "npm run build && npm run build:canva",
+    "deploy": "GITHUB_PAGES=true npm run build:all && npx gh-pages -d ../dist",
     "lint": "eslint .",
     "preview": "vite preview"
   },

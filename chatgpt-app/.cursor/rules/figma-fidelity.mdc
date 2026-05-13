@@ -1,0 +1,39 @@
+---
+description: Always follow the Figma design accurately for this prototype
+alwaysApply: true
+---
+
+# Figma Design Fidelity
+
+This project is a high-fidelity prototype matched to a Figma design. Every UI change must stay true to the spec.
+
+## Before making any UI change
+
+1. Use the Figma MCP (`get_design_context` or `get_screenshot`) to retrieve the relevant Figma node before writing code.
+2. If a Figma URL or node ID is provided, always fetch it first — do not guess from context.
+3. If no URL is provided, ask the user for the Figma link before proceeding with visual changes.
+
+## Implementation rules
+
+- **Spacing & layout** — match padding, gap, margin, and grid values from Figma exactly. Do not round to "nice" numbers.
+- **Typography** — use the exact font size, weight, line-height, and letter-spacing from the Figma spec. Never substitute.
+- **Color** — use the exact hex or rgba values from Figma. Do not approximate.
+- **Border radius, shadows, borders** — copy values verbatim from Figma.
+- **Component structure** — match the Figma layer hierarchy and naming where it maps to classNames or component names.
+- **Icons & images** — use the assets already in `public/svg/` and `public/`. Never generate placeholder icons if the correct asset exists.
+
+## Node ID references
+
+When implementing a specific Figma node, add a comment with its node ID:
+
+```jsx
+{/* Figma node 810-7610 — Generate from scratch outline */}
+```
+
+The codebase already follows this convention (see `App.jsx` line ~101).
+
+## What not to do
+
+- Do not apply personal design taste, rounded design system defaults, or "improvements" unless the user explicitly asks.
+- Do not change colors, spacing, or type to match a different design system (e.g. Tailwind defaults, MUI, etc.).
+- Do not add animations, hover states, or visual polish that aren't in the Figma design.

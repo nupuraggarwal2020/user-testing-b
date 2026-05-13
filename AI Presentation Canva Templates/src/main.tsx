@@ -28,7 +28,12 @@ function getBasename(): string {
     return envBasePath;
   }
 
-  // When embedded in chatgpt-app at /canva-editor/, use that as basename
+  // When embedded in chatgpt-app at /canva-app/ (current shell) or
+  // /canva-editor/ (legacy), use that as the router basename so the route
+  // `/` correctly resolves and the AIPresentationView renders.
+  if (pathname.startsWith("/canva-app")) {
+    return "/canva-app";
+  }
   if (pathname.startsWith("/canva-editor")) {
     return "/canva-editor";
   }
