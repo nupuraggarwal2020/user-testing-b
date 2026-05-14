@@ -4,7 +4,7 @@ import HomeView from './components/HomeView.jsx'
 import CanvaWidgetPlaceholder from './components/CanvaWidgetPlaceholder.jsx'
 import StyleSelectionWidget from './components/StyleSelectionWidget.jsx'
 import { CHATGPT_APP_SHELL_NAME } from './shellConfig.js'
-import { getAssistantResponseFromPrompt } from './mockAssistantReply.js'
+import { getAssistantResponseFromPrompt, synthesizeOutlineFromTopic, titleCase } from './mockAssistantReply.js'
 import { fetchAssistantResponseFromPrompt } from './assistantClient.js'
 
 /**
@@ -911,6 +911,108 @@ Clear recommendations and what you need from the audience. Make the ask specific
     </div>
   )
 
+  /**
+   * In-chat outline reply card. Renders the topic-flavored deck outline as a
+   * single card (header row with Copy/Edit/Download, big topic heading, slide
+   * list, footer paragraphs) followed by a slim message-action icon row. The
+   * Review-outline overlay keeps using the older `.outline-card` rules — see
+   * App.css line ~662 — so styling here lives under a separate
+   * `.chat-outline-card*` namespace and won't collide.
+   *
+   * `topic` is the raw topic string from the assistant reply (synthesised
+   * from the prompt); we title-case it for the header and sentence-case it
+   * for the big heading. `footer` is whitespace-paragraph-split into 1+ <p>s.
+   */
+  const ChatOutlineCard = ({ topic, sections, footer }) => {
+    const safeTopic = (topic || 'your presentation').trim()
+    const headerTopic = titleCase(safeTopic)
+    const headingTopic = safeTopic
+      ? safeTopic[0].toUpperCase() + safeTopic.slice(1)
+      : safeTopic
+    const footerParagraphs = (footer || '')
+      .split(/\n\s*\n/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+
+    return (
+      <>
+        <article className="chat-outline-card">
+          <header className="chat-outline-card-header">
+            <h2 className="chat-outline-card-title">{headerTopic} Presentation</h2>
+            <div className="chat-outline-card-actions">
+              <button type="button" className="chat-outline-card-action" onClick={() => {}}>
+                Copy
+              </button>
+              <button type="button" className="chat-outline-card-action" onClick={() => {}}>
+                Edit
+              </button>
+              <button type="button" className="chat-outline-card-action" onClick={() => {}}>
+                Download
+              </button>
+            </div>
+          </header>
+
+          <h3 className="chat-outline-card-topic">{headingTopic}</h3>
+
+          <ol className="chat-outline-slides">
+            {sections.map((sec) => (
+              <li key={sec.num} className="chat-outline-slide">
+                <p className="chat-outline-slide-title">
+                  Slide {sec.num}: {sec.title}
+                </p>
+                <p className="chat-outline-slide-body">
+                  {sec.desc}
+                  {Array.isArray(sec.points) && sec.points.length > 0
+                    ? ` ${sec.points.join('. ')}.`
+                    : ''}
+                </p>
+              </li>
+            ))}
+          </ol>
+
+          {footerParagraphs.length > 0 && (
+            <div className="chat-outline-footer">
+              {footerParagraphs.map((p, i) => (
+                <p key={i} className="chat-outline-footer-text">{p}</p>
+              ))}
+            </div>
+          )}
+        </article>
+
+        {/* Subtle 4-icon action row under the assistant message. The
+            existing `.chatgpt-follow-up-icon` class would give us 6 icons
+            (copy / 👍 / 👎 / share / regenerate / more); the screenshot
+            only shows 4 (copy / 👍 / 👎 / overflow), so we render a slim
+            local row instead of reusing FollowUpActions. */}
+        <div className="chat-outline-message-actions" aria-label="Message actions">
+          <button type="button" className="chat-outline-message-action" aria-label="Copy">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+          <button type="button" className="chat-outline-message-action" aria-label="Good response">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+            </svg>
+          </button>
+          <button type="button" className="chat-outline-message-action" aria-label="Bad response">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/>
+            </svg>
+          </button>
+          <button type="button" className="chat-outline-message-action" aria-label="More">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="5" cy="12" r="1.25"/>
+              <circle cx="12" cy="12" r="1.25"/>
+              <circle cx="19" cy="12" r="1.25"/>
+            </svg>
+          </button>
+        </div>
+      </>
+    )
+  }
+
   const widgetEntries = canvaThread.filter((e) => e.type === 'widget')
   const lastWidgetEntry = widgetEntries[widgetEntries.length - 1]
   const lastWidgetId = lastWidgetEntry?.id
@@ -1397,22 +1499,11 @@ Clear recommendations and what you need from the audience. Make the ask specific
                     ) : assistantFirstTurn ? (
                       <div className="outline-container">
                         {assistantFirstTurn.mode === 'outline' && assistantFirstTurn.sections ? (
-                          <div className="outline-cards">
-                            {assistantFirstTurn.sections.map((sec, idx) => (
-                              <article
-                                key={sec.num}
-                                className={`outline-card${idx === 0 ? ' outline-card--first' : ''}`}
-                              >
-                                <h3 className="outline-card-title">{sec.title}</h3>
-                                <p className="outline-card-desc">
-                                  {sec.desc}
-                                  {Array.isArray(sec.points) && sec.points.length > 0
-                                    ? ` ${sec.points.join('. ')}.`
-                                    : ''}
-                                </p>
-                              </article>
-                            ))}
-                          </div>
+                          <ChatOutlineCard
+                            topic={assistantFirstTurn.topic || homeEntryPrompt}
+                            sections={assistantFirstTurn.sections}
+                            footer={assistantFirstTurn.followUp}
+                          />
                         ) : null}
                         {assistantFirstTurn.mode === 'prose' && assistantFirstTurn.prose ? (
                           <div className="assistant-prose-body">{assistantFirstTurn.prose}</div>
@@ -1427,13 +1518,18 @@ Clear recommendations and what you need from the audience. Make the ask specific
                       </div>
                     ) : null}
                   </div>
-                  <ChatGptFollowUp
-                    text={
-                      assistantFirstTurnLoading
-                        ? 'One moment…'
-                        : assistantFirstTurn?.followUp ?? 'Ask anything below.'
-                    }
-                  />
+                  {/* Outline reply now ships its own footer + action row inside the
+                      ChatOutlineCard, so we only render the standard ChatGptFollowUp
+                      for the prose / bullets / loading branches. */}
+                  {(assistantFirstTurnLoading || assistantFirstTurn?.mode !== 'outline') && (
+                    <ChatGptFollowUp
+                      text={
+                        assistantFirstTurnLoading
+                          ? 'One moment…'
+                          : assistantFirstTurn?.followUp ?? 'Ask anything below.'
+                      }
+                    />
+                  )}
                 </>
               )}
               {flowStep !== 'outline' && (submittedPrompt || remixItem) && (
@@ -1897,39 +1993,36 @@ Clear recommendations and what you need from the audience. Make the ask specific
                   <span className="chatgpt-loading-dot" aria-hidden />
                   <span className="canva-secondary-loading-chat-message">Generating outline…</span>
                 </div>
-              ) : assistantFirstTurn?.mode === 'outline' && assistantFirstTurn.sections?.length ? (
-                assistantFirstTurn.sections.map((sec, idx) => (
-                  <article
-                    key={sec.num}
-                    className={`outline-card${idx === 0 ? ' outline-card--first' : ''}`}
-                  >
-                    <h3 className="outline-card-title">{sec.title}</h3>
-                    <p className="outline-card-desc">
-                      {sec.desc}
-                      {Array.isArray(sec.points) && sec.points.length > 0
-                        ? ` ${sec.points.join('. ')}.`
-                        : ''}
-                    </p>
-                  </article>
-                ))
-              ) : assistantFirstTurn?.mode === 'prose' && assistantFirstTurn.prose ? (
-                <article className="outline-card outline-card--first">
-                  <h3 className="outline-card-title">Response</h3>
-                  <p className="outline-card-desc">{assistantFirstTurn.prose}</p>
-                </article>
-              ) : assistantFirstTurn?.mode === 'bullets' && assistantFirstTurn.bullets?.length ? (
-                assistantFirstTurn.bullets.map((item, idx) => (
-                  <article
-                    key={idx}
-                    className={`outline-card${idx === 0 ? ' outline-card--first' : ''}`}
-                  >
-                    <p className="outline-card-desc">{item}</p>
-                  </article>
-                ))
               ) : (
-                <div className="review-outline-empty">
-                  <p>No outline yet — submit a prompt to generate one.</p>
-                </div>
+                /* The Review-outline overlay always shows outline cards. When
+                   the chat's first reply is itself an outline we render its
+                   sections; otherwise (prose / bullets / no reply yet) we
+                   synthesise an outline from the user's original prompt so
+                   the user always has something to review. The card styling
+                   (.outline-card / .outline-card-title / .outline-card-desc)
+                   is intentionally unchanged — it's still scoped via
+                   `.review-outline-fullscreen .outline-cards` (App.css line
+                   ~4338) so the Review-outline widget stays authoritative. */
+                (() => {
+                  const reviewSections =
+                    assistantFirstTurn?.mode === 'outline' && assistantFirstTurn.sections?.length
+                      ? assistantFirstTurn.sections
+                      : synthesizeOutlineFromTopic(homeEntryPrompt).sections
+                  return reviewSections.map((sec, idx) => (
+                    <article
+                      key={sec.num ?? idx}
+                      className={`outline-card${idx === 0 ? ' outline-card--first' : ''}`}
+                    >
+                      <h3 className="outline-card-title">{sec.title}</h3>
+                      <p className="outline-card-desc">
+                        {sec.desc}
+                        {Array.isArray(sec.points) && sec.points.length > 0
+                          ? ` ${sec.points.join('. ')}.`
+                          : ''}
+                      </p>
+                    </article>
+                  ))
+                })()
               )}
             </div>
           </main>
